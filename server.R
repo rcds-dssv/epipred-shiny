@@ -1,16 +1,11 @@
 library(shiny)
-
-# Define server logic required to draw a histogram
-# Load the ggplot2 package which provides
-# the 'mpg' dataset.
 library(ggplot2)
 library(dplyr)
 library(plotly)
 
-mutations <- read.csv(file="STXBP1_DTv2.csv")
 function(input, output) {
   output$structure <- renderNGLVieweR({
-    NGLVieweR("stxbp1.pdb") %>%
+    NGLVieweR("data/pdb/stxbp1.pdb") %>%
       addRepresentation("cartoon",
                         param = list(
                           name = "cartoon", color =

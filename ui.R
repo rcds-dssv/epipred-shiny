@@ -4,9 +4,7 @@ library(NGLVieweR)
 library(ggplot2)
 library(dplyr)
 library(plotly)
-
-mutations <- read.csv(file="STXBP1_DTv2.csv")
-vars <- c('EpiPred_Raw_Score','CADD_PHRED')
+library(DT)
 
 fluidPage(
   navbarPage("EpiPred",
