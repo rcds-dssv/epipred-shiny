@@ -1,12 +1,5 @@
-library(shiny)
-library(shinyWidgets)
-library(NGLVieweR)
-library(ggplot2)
-library(dplyr)
-library(plotly)
-library(DT)
 
-fluidPage(
+ui <- fluidPage(
   navbarPage(
     "EpiPred",
     tabPanel("Home", HomeUI("home")),

@@ -40,7 +40,8 @@ SingleVarUI <- function(id) {
       column(8, align="center", offset = 2,
              textInput(NS(id,"val"), h3("Input Amino Acid Sequence"), value = "p.A2P"),
              actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
-             div(style="padding-top:15px;",verbatimTextOutput(NS(id,"text")))
+             div(style="padding-top:15px;",verbatimTextOutput(NS(id,"text"))),
+             plotOutput(NS(id,"epipred_bar"))
       )
     ),
     column(4,
@@ -82,6 +83,11 @@ SingleVarServer <- function(id) {
       input$update
       data <- data.frame(mutations)
       isolate(paste("Pathogenic Score is:", toString(unique(data$EpiPred_Raw_Score[data$AA_Change==input$val])), "\nPathogenic Class:", toString(unique(data$EpiPred_Class[data$AA_Change==input$val]))))
+    })
+    
+    # epipred output
+    output$epipred_bar <- renderPlot({
+      epipred_colorbar()
     })
     
     # plot output (temporary)
