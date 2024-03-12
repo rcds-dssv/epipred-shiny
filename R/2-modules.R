@@ -1,3 +1,4 @@
+
 # Module for the Home Tab
 HomeUI <- function(id) {
   fluidRow(
@@ -38,85 +39,115 @@ SingleVarUI <- function(id) {
     fluidRow(
       # Input for Amino Acid Sequence and Display prediction result
       column(8, align="center", offset = 2,
-             textInput(NS(id,"val"), h3("Input Amino Acid Sequence"), value = "p.A2P"),
-             actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
-             div(style="padding-top:15px;",verbatimTextOutput(NS(id,"text"))),
-             plotOutput(NS(id,"epipred_bar"))
+        textInput(NS(id,"val"), h3("Input Amino Acid Sequence"), value = "p.A2P"),
+        actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
+        div(style="padding-top:15px;", verbatimTextOutput(NS(id,"text"))),
+        plotOutput(NS(id,"epipred_bar"), height = 230)
       )
     ),
-    column(4,
-           selectInput(NS(id,"report_gg"),
-                       "Reported:",
-                       c("All",unique(as.character(mutations$Reported))),
-           )
+    # color bar plot
+    fluidRow(
+      column(
+        4,
+        selectInput(
+          NS(id,"report_gg"), "Reported:",
+          c("All", report_source)
+        ),
+        offset = 2
+      )
     ),
-    br(), br(), 
-    plotlyOutput(NS(id,'pointplot'))
+    # epipred score vs position
+    fluidRow(
+      column(
+        12, plotOutput(NS(id,"epi_score_indiv_plot"), width = "80%"), align = "center"
+      )
+    )
   )
 }
 
-SingleVarServer <- function(id) {
+SingleVarServer <- function(id, epipred_colorbar, line_orientation) {
   moduleServer(id, function(input, output, session) {
+    # update variant ID on update button press
+    # only update if the variant id exists
+    variant_id_tmp <- reactive({
+      input$update
+      isolate(input$val)
+    })
+    variant_id <- reactiveVal()
+    observe({
+      if (variant_id_tmp() %in% mutations$AA_Change) {
+        variant_id(variant_id_tmp())
+      }
+    })
+    
+    # retrieve prediction result for chosen variant
+    epipred_prediction <- reactive({
+      get_epipred_prediction(variant_id(), mutations)
+    })
+    
     # NGLViewer Output
     output$structure <- renderNGLVieweR({
-      NGLVieweR("data/pdb/stxbp1.pdb") %>%
+      NGLVieweR(pdbfile) %>%
         addRepresentation(
           "cartoon",
-          param = list(name = "cartoon", color = "residueindex"
-        )
-      ) %>%
-      addRepresentation("ball+stick",
-                        param = list(
-                          name = "cartoon",
-                          sele = "1-20",
-                          colorScheme = "element"
-                        )
-      ) %>%
-      stageParameters(backgroundColor = "white") %>%
+          param = list(name = "cartoon", color = "residueindex")
+        ) %>%
+      stageParameters(backgroundColor = "black") %>%
       setQuality("high") %>%
       setFocus(0) %>%
       setSpin(TRUE)
     })
     
+    # when variant is updated, highlight the affected residue
+    observeEvent(input$update, {
+      aa_pos <- mutations %>%
+        filter(AA_Change %in% variant_id()) %>%
+        pull(AA_POS) %>% 
+        min() %>%
+        as.character()
+      
+      NGLVieweR_proxy("structure") %>%
+        removeSelection("my_residue") %>%
+        addSelection("surface",
+          param = list(
+            isolevel = 0.005, isolevelType = "value",
+            sele = aa_pos, name = "my_residue"
+          )
+        )
+    })
+    
     # variant prediction text output
     output$text <- renderText({
-      input$update
       data <- data.frame(mutations)
-      isolate(paste("Pathogenic Score is:", toString(unique(data$EpiPred_Raw_Score[data$AA_Change==input$val])), "\nPathogenic Class:", toString(unique(data$EpiPred_Class[data$AA_Change==input$val]))))
+      paste(
+        "Pathogenic Score is:",
+        toString(epipred_prediction()$score),
+        "\nPathogenic Class:",
+        toString(epipred_prediction()$class)
+      )
     })
     
-    # epipred output
+    # epipred colorbar output
     output$epipred_bar <- renderPlot({
-      epipred_colorbar()
-    })
+      display_epipred_score(
+        epipred_prediction = epipred_prediction(),
+        epipred_colorbar = epipred_colorbar,
+        line_orientation = line_orientation
+      )
+    }, height = 200)
     
-    # plot output (temporary)
-    output$pointplot <- renderPlotly({
-      data <- data.frame(mutations)
+    # plot position vs score
+    output$epi_score_indiv_plot <- renderPlot({
       if (input$report_gg != "All") {
-        data <- data[data$Reported == input$report_gg,]
+        mutations_filtered <- mutations %>%
+          filter(Reported == input$report_gg)
+      } else {
+        mutations_filtered <- mutations
       }
-      gg <- ggplot(data, aes(x = AA_POS, y = 0,  group = Reported, color = EpiPred_Class)) + 
-        geom_point(aes(size = EpiPred_Raw_Score, ids = AA_Change), alpha = 0.6, shape = 21) + 
-        coord_cartesian(ylim = c(-.5, .5)) +
-        scale_x_continuous(breaks=seq(0, 650, by = 50)) +
-        scale_size_area(max_size = 10) +
-        theme(
-          panel.grid.major = element_line(color = "lightgrey", size = 0.2),
-          panel.grid.major.y = element_blank(),
-          panel.background = element_rect(fill = "white"),
-          axis.text.y = element_blank(),
-          axis.text.x = element_text(size = 6),
-          axis.title.x = element_blank(),
-          axis.title.y = element_blank(),
-          axis.ticks.y = element_blank(),
-          plot.title = element_blank(),
-          legend.title = element_blank(),
-          panel.border = element_rect(colour = "darkgrey", fill = NA, size = 1)
-        )
-      
-      
-      ggplotly(gg, tooltip = c( "AA_Change", "EpiPred_Class", "EpiPred_Raw_Score"))
+      plot_epi_raw(
+        var_id = variant_id(),
+        mutations = mutations_filtered
+      )
     })
   })
 }
