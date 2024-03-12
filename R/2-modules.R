@@ -92,7 +92,7 @@ SingleVarServer <- function(id, epipred_colorbar, line_orientation) {
           "cartoon",
           param = list(name = "cartoon", color = "residueindex")
         ) %>%
-      stageParameters(backgroundColor = "black") %>%
+      stageParameters(backgroundColor = "white") %>%
       setQuality("high") %>%
       setFocus(0) %>%
       setSpin(TRUE)
@@ -155,7 +155,8 @@ SingleVarServer <- function(id, epipred_colorbar, line_orientation) {
 # Module for displaying Table for a given gene
 TableDisplayUI <- function(id) {
   tagList(
-    titlePanel("STXBP1 Variant Table"),
+    titlePanel("Missense Variant Table"),
+    h3("Gene: STXBP1"),
     fluidRow(
       column(4,
              selectInput(NS(id,"class"),
@@ -217,67 +218,36 @@ TableDisplayServer <- function(id) {
 # Module for exploring prediction result for all variants in a given gene
 AllVarUI <- function(id) {
   tagList(
-    plotOutput(NS(id,"plot")),
-    sliderInput(NS(id,"n"), "Number of Variants", 1, length(mutations$EpiPred_Raw_Score), 50, step = 5),
-    plotOutput(NS(id,'dotplot1')),
-    fluidRow(
-      column(4,
-             selectInput(NS(id,'xcol'), 'X Variable', vars),
-      ),
-      column(4,
-             selectInput(NS(id,'ycol'), 'Y Variable', vars, selected = vars[[2]])
-      )
-    )
+    titlePanel("All Variants Summary"), 
+    plotlyOutput(NS(id,"score_comparison_plot"), height = 400, width = 700),
+    plotOutput(NS(id,"score_distribution_plot_CADD"), height = 400, width = 700),
+    plotOutput(NS(id,"score_distribution_plot_EpiPred"), height = 400, width = 700),
+    plotOutput(NS(id,"score_by_position_plot_CADD"), height = 400, width = 700),
+    plotOutput(NS(id,"score_by_position_plot_EpiPred"), height = 400, width = 700)
   )
 }
 
 AllVarServer <- function(id) {
   moduleServer(id, function(input,output,session) {
-    output$plot <- renderPlot({
-      data <- data.frame(mutations)
-      hist(data$EpiPred_Raw_Score[seq_len(input$n)], breaks = 30, main="Distribution of Variants by EpiPred Score", xlab = "Pathogenicity Score")
+    # score comparison plot
+    output$score_comparison_plot <- renderPlotly({
+      score_comparison_plot(mutations)
     })
     
-    output$dotplot1 <- renderPlot({
-      palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
-                "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
-      
-      par(mar = c(5.1, 4.1, 0, 1))
-      data <- data.frame(mutations)
-      plot(data[seq_len(input$n),c(input$xcol, input$ycol)],
-           pch = 20, cex = 3)
+    # compare score distribution
+    output$score_distribution_plot_CADD <- renderPlot({
+      score_distribution_plot(mutations, "CADD_PHRED")
+    })
+    output$score_distribution_plot_EpiPred <- renderPlot({
+      score_distribution_plot(mutations, "EpiPred_Raw_Score")
     })
     
-    output$dashedplot <- renderPlot({
-      data <- data.frame(mutations)
-      data <- data[c("AA_POS", "EpiPred_Raw_Score")]
-      agg_min = aggregate(data,
-                          by = list(data$AA_POS),
-                          FUN = min)
-      agg_median = aggregate(data,
-                             by = list(data$AA_POS),
-                             FUN = median)
-      agg_max = aggregate(data,
-                          by = list(data$AA_POS),
-                          FUN = max)
-      #print(agg)
-      ggplot() +
-        geom_point(data = agg_min, aes(x = AA_POS, y = EpiPred_Raw_Score), color = "blue") + 
-        geom_line(data = agg_min, aes(x = AA_POS, y = EpiPred_Raw_Score), linetype = "dashed", color = "blue") +
-        geom_point(data = agg_median, aes(x = AA_POS, y = EpiPred_Raw_Score), color = "black") + 
-        geom_line(data = agg_median, aes(x = AA_POS, y = EpiPred_Raw_Score),linetype = "dashed", color = "black") +
-        geom_point(data = agg_max, aes(x = AA_POS, y = EpiPred_Raw_Score), color = "red") + 
-        geom_line(data = agg_max, aes(x = AA_POS, y = EpiPred_Raw_Score),linetype = "dashed", color = "red") 
+    # show score by position plot
+    output$score_by_position_plot_CADD <- renderPlot({
+      score_v_position(mutations, "CADD_PHRED")
     })
-    
-    output$dotplot1 <- renderPlot({
-      palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
-                "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
-      
-      par(mar = c(5.1, 4.1, 0, 1))
-      data <- data.frame(mutations)
-      plot(data[seq_len(input$n),c(input$xcol, input$ycol)],
-           pch = 20, cex = 3)
+    output$score_by_position_plot_EpiPred <- renderPlot({
+      score_v_position(mutations, "EpiPred_Raw_Score")
     })
   })
 }
