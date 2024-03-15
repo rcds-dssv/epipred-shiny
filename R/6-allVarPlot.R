@@ -69,5 +69,36 @@ score_v_position <- function(mutations, score) {
   return(g)
 }
 
-head(mutations)
+# create marginal plot
+marginal_plot <- function(
+    mutations, var1, var2, 
+    margin_type = "density", 
+    reported = c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only")
+) {
+  # create color mapping for report source
+  reported_sources <- c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only")
+  reported_colormap <- brewer.pal(length(reported_sources), "Set2")
+  names(reported_colormap) <- reported_sources
+  
+  # subset data to included select reported source
+  subset_data <- mutations %>% filter(Reported %in% reported)
+  
+  # create main scatter plot
+  g <- ggplot(subset_data) +
+    geom_point(aes(x = .data[[var1]], y = .data[[var2]], color = Reported)) +
+    scale_discrete_manual(aesthetics = "color", values = reported_colormap) +
+    theme_bw() +
+    theme(legend.position = "bottom")
+  
+  # apply marginal plot
+  gmarg <- ggMarginal(g, type = margin_type, margins = "both", groupColour = TRUE, groupFill = TRUE)
+  
+  return(gmarg)
+}
+
+# reported <- c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only")
+# c("density", "histogram", "boxplot", "violin", "densigram")
+# tmp <- marginal_plot(mutations, "CADD_PHRED", "EpiPred_Raw_Score", marginal_type = "violin", reported = reported)
+# ggMarginalGadget(tmp)
+
 

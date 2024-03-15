@@ -218,36 +218,32 @@ TableDisplayServer <- function(id) {
 # Module for exploring prediction result for all variants in a given gene
 AllVarUI <- function(id) {
   tagList(
-    titlePanel("All Variants Summary"), 
-    plotlyOutput(NS(id,"score_comparison_plot"), height = 400, width = 700),
-    plotOutput(NS(id,"score_distribution_plot_CADD"), height = 400, width = 700),
-    plotOutput(NS(id,"score_distribution_plot_EpiPred"), height = 400, width = 700),
-    plotOutput(NS(id,"score_by_position_plot_CADD"), height = 400, width = 700),
-    plotOutput(NS(id,"score_by_position_plot_EpiPred"), height = 400, width = 700)
+    titlePanel("All Variants Summary"),
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(NS(id,"var1"), "x Variable", choices = scatterplot_vars, selected = scatterplot_vars[1]),
+        selectInput(NS(id,"var2"), "y Variable", choices = scatterplot_vars, selected = scatterplot_vars[2]),
+        selectInput(NS(id,"margin_type"), "Margin Plot Type", choices = c("density", "histogram", "boxplot", "violin", "densigram")),
+        checkboxGroupInput(NS(id,"report"), "Reported:", choices = report_source, selected = report_source)
+      ),
+      mainPanel(
+        plotOutput(NS(id,"marginal_plot")), height = "600px"
+      )
+    )
   )
 }
 
 AllVarServer <- function(id) {
   moduleServer(id, function(input,output,session) {
-    # score comparison plot
-    output$score_comparison_plot <- renderPlotly({
-      score_comparison_plot(mutations)
-    })
-    
-    # compare score distribution
-    output$score_distribution_plot_CADD <- renderPlot({
-      score_distribution_plot(mutations, "CADD_PHRED")
-    })
-    output$score_distribution_plot_EpiPred <- renderPlot({
-      score_distribution_plot(mutations, "EpiPred_Raw_Score")
-    })
-    
-    # show score by position plot
-    output$score_by_position_plot_CADD <- renderPlot({
-      score_v_position(mutations, "CADD_PHRED")
-    })
-    output$score_by_position_plot_EpiPred <- renderPlot({
-      score_v_position(mutations, "EpiPred_Raw_Score")
+    output$marginal_plot <- renderPlot({
+      req(length(input$report) > 0)
+      marginal_plot(
+        mutations = mutations,
+        var1 = input$var1,
+        var2 = input$var2,
+        margin_type = input$margin_type,
+        reported = input$report
+      )
     })
   })
 }

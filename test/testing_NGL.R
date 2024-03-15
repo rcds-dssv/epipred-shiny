@@ -16,6 +16,9 @@ NGLVieweR(pdbfile)  %>%
       sele = "10",
       color = "0x4E2A84", colorMode = "rgb"
     )
+  ) %>%
+  addRepresentation("label"
+    
   )
 
 
