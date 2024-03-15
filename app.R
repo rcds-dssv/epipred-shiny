@@ -13,10 +13,13 @@ source("R/6-allVarPlot.R")
 ui <- fluidPage(
   navbarPage(
     "EpiPred",
-    tabPanel("Home", HomeUI("home")),
-    tabPanel("Score Missense Variant", SingleVarUI("single_var")),
-    tabPanel("STXPB1 Table", TableDisplayUI("table_display")),
-    tabPanel("Plots", AllVarUI("all_var"))
+    tabPanel("Welcome Page", HomeUI("home")),
+    tabPanel("For Patients", SingleVarUI("single_var")),
+    tabPanel("For Researchers",
+      AllVarUI("all_var"),
+      hr(style = "border-top: 1px solid #000000;"),
+      TableDisplayUI("table_display")
+    )
   ))
 
 # server
