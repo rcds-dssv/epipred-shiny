@@ -25,11 +25,18 @@ plot_epi_raw_v_aa_pos <- function(
     ) + 
     scale_y_continuous(
       limits = c(0,1),
-      sec.axis = sec_axis(
-        transform = ~ .,
-        breaks = c(0.125, 0.375, 0.625, 0.875),
-        labels = c("Lkely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic"))
+      # comment this part out, and put it in the boxplot
+      # sec.axis = sec_axis(
+      #   transform = ~ .,
+      #   breaks = c(0.125, 0.375, 0.625, 0.875),
+      #   labels = c("Lkely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic"))
       ) +
+    geom_hline(
+      yintercept = mutations_selected$EpiPred_Raw_Score,
+      color = "red",
+      linetype = "dashed",
+      linewidth = 1.4
+    ) +
     theme_bw() +
     theme(
       axis.text.y.right = element_text(angle = -90, hjust = 0.5),
@@ -66,12 +73,27 @@ plot_epi_raw_boxplot <- function(
       aes(x = 1, y = EpiPred_Raw_Score),
       data = mutations_selected,
       color = "black", fill = "red", shape = 23, size = 3.5
+    ) + 
+    scale_y_continuous(
+      limits = c(0,1),
+      sec.axis = sec_axis(
+        transform = ~ .,
+        breaks = c(0.125, 0.375, 0.625, 0.875),
+        labels = c("Lkely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic"))
+    ) + 
+    geom_hline(
+      yintercept = mutations_selected$EpiPred_Raw_Score,
+      color = "red",
+      linetype = "dashed",
+      linewidth = 1.4
     ) +
     theme_bw() +
     theme(
       axis.text = element_blank(),
       axis.ticks = element_blank(),
-      axis.title = element_blank()
+      axis.title = element_blank(),
+      axis.text.y.right = element_text(angle = -90, hjust = 0.5),
+      axis.ticks.y.right = element_blank()
     )
 }
 
