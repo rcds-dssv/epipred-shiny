@@ -15,11 +15,11 @@ display_epipred_score <- function(
     epipred_prediction, epipred_colorbar, line_orientation = "h") {
   epi_score <- epipred_prediction$score
   if (line_orientation == "h") {
-    g <- epipred_colorbar + 
-      geom_hline(yintercept = epi_score)
+    g <- epipred_colorbar +
+      geom_segment(y = epipred_prediction$score, x = -0.7, xend = 0.7)
   } else {
     g <- epipred_colorbar +
-      geom_vline(xintercept = epi_score)
+      geom_segment(x = epipred_prediction$score, y = -0.7, yend = 0.7)
   }
   return(g)
 }

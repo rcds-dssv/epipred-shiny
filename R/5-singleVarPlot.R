@@ -35,7 +35,7 @@ plot_epi_raw_v_aa_pos <- function(
       yintercept = mutations_selected$EpiPred_Raw_Score,
       color = "red",
       linetype = "dashed",
-      linewidth = 1.4
+      linewidth = 0.7
     ) +
     theme_bw() +
     theme(
@@ -85,7 +85,7 @@ plot_epi_raw_boxplot <- function(
       yintercept = mutations_selected$EpiPred_Raw_Score,
       color = "red",
       linetype = "dashed",
-      linewidth = 1.4
+      linewidth = 0.7
     ) +
     theme_bw() +
     theme(
