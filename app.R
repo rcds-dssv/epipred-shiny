@@ -1,4 +1,5 @@
 library(shiny)
+library(bslib)
 
 source("R/1-setup.R")
 source("R/2-modules.R")
@@ -24,8 +25,9 @@ ui <- fluidPage(
 
 # server
 server <- function(input, output) {
-  epipred_colorbar <- create_epipred_colorbar(nbars = 1000, void = TRUE, middle_color = "lightgrey")
-  line_orientation <- "h"
+  # epipred_colorbar <- create_epipred_colorbar(nbars = 1000, void = TRUE, middle_color = "lightgrey")
+  epipred_colorbar <- create_epipred_colorbar2()
+  line_orientation <- "v"
   
   SingleVarServer("single_var", epipred_colorbar, line_orientation)
   TableDisplayServer("table_display")
