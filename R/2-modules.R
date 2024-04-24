@@ -32,41 +32,85 @@ HomeUI <- function(id) {
 
 # Module for Single Missense Variant Prediction Tab
 SingleVarUI <- function(id) {
-  tagList(
-    # Display NGLViewer
-    NGLVieweROutput(NS(id,"structure")),
+  fixedPage(
+    titlePanel(h1("EpiPred Result Explorer", align = "center") ),
     
-    fluidRow(
-      # Input for Amino Acid Sequence and Display prediction result
-      column(8, align="center", offset = 2,
-        textInput(NS(id,"val"), h3("Input Amino Acid Sequence"), value = "p.A2P"),
-        actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
-        div(style="padding-top:15px;", verbatimTextOutput(NS(id,"text"))),
-        plotOutput(NS(id,"epipred_bar"), height = 230)
-      )
-    ),
-    # color bar plot
-    fluidRow(
-      column(
-        4,
-        selectInput(
-          NS(id,"report_gg"), "Reported:",
-          c("All", report_source)
+    br(),  
+    
+    h2("Variant Input"),
+    hr(),
+    
+    # Input for Amino Acid Sequence and Display prediction result
+    wellPanel(
+      fluidRow(
+        # control visualizations
+        column(1,
+          tooltip(
+            bs_icon("question-circle-fill", is = NS(id,"variant_tooltip")),
+            "Some Message",
+            placement = "bottom"
+          )
         ),
-        offset = 2
+        column(4, align = "center",
+          textInput(NS(id,"val"), "Input Amino Acid Sequence", value = "p.A2P"),
+          actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
+          offset = 3
+        ),
+      ),
+    ),
+    br(),
+    fluidRow(
+      column(10, h2("Result Viewer")),
+      column(2, align = "center",
+        dropdownButton(
+         radioButtons(NS(id,"epi_dist"), "Distribution in Colorbar",
+                      choices = c("proportion", "density"), selected = "proportion"
+         ),
+         
+         strong("Toggle 3-D Viewer Spin"),
+         br(),
+         switchInput(NS(id,"NGL_spin"), value = TRUE, size = "small"),
+         icon = icon("gear"), width = "300px",
+         right = TRUE,
+         status = "info",
+         circle = FALSE
+        )
       )
     ),
-    # epipred score vs position
+    hr(),
+    
+    # color bar plot
+    h3("Your Sequence's EpiPred Score", align = "center"),
+    br(),
     fluidRow(
       column(
-        12, plotOutput(NS(id,"epi_score_indiv_plot"), width = "80%"), align = "center"
-      )
+        12, align = "center",
+        plotOutput(NS(id,"epipred_bar"), height = 260, width = 600)
+      ),
+    ),
+    
+    # floaty protein
+    h3("3-D Rendering of Protein", align = "center"),
+    fluidRow(
+      column(8, NGLVieweROutput(NS(id,"structure")), offset = 2)
     )
   )
+
 }
 
-SingleVarServer <- function(id, epipred_colorbar, line_orientation) {
+SingleVarServer <- function(id) {
   moduleServer(id, function(input, output, session) {
+    
+    # used for plotting the colorbar in "for patients" tab
+    epi_dist_summary <- get_epi_distribution_summary(mutations)
+    
+    epipred_colorbar <- reactive(
+      create_epipred_colorbar2(
+        epi_dist_summary = epi_dist_summary,
+        distribution_type = input$epi_dist
+      )
+    )
+    
     # update variant ID on update button press
     # only update if the variant id exists
     variant_id_tmp <- reactive({
@@ -96,6 +140,11 @@ SingleVarServer <- function(id, epipred_colorbar, line_orientation) {
       setQuality("high") %>%
       setFocus(0) %>%
       setSpin(TRUE)
+    })
+    
+    observeEvent(input$NGL_spin,{
+      NGLVieweR_proxy("structure") %>%
+        updateSpin(input$NGL_spin)
     })
     
     # when variant is updated, highlight the affected residue
@@ -131,10 +180,9 @@ SingleVarServer <- function(id, epipred_colorbar, line_orientation) {
     output$epipred_bar <- renderPlot({
       display_epipred_score(
         epipred_prediction = epipred_prediction(),
-        epipred_colorbar = epipred_colorbar,
-        line_orientation = line_orientation
+        epipred_colorbar = epipred_colorbar()
       )
-    }, height = 200)
+    }, height = 230)
     
     # plot position vs score
     output$epi_score_indiv_plot <- renderPlot({
@@ -144,12 +192,14 @@ SingleVarServer <- function(id, epipred_colorbar, line_orientation) {
       } else {
         mutations_filtered <- mutations
       }
-      plot_epi_raw(
+      plot_epi_raw_violinplot(
         var_id = variant_id(),
         mutations = mutations_filtered
       )
     })
   })
+  
+  
 }
 
 # Module for displaying Table for a given gene
@@ -172,8 +222,8 @@ TableDisplayUI <- function(id) {
       )
       
     ),
-    DT::dataTableOutput(NS(id,"table")),
-    downloadButton(NS(id,"downloadData"), "Download")
+    fluidRow(DT::dataTableOutput(NS(id,"table"))),
+    fluidRow(downloadButton(NS(id,"downloadData"), "Download"))
   )
 }
 

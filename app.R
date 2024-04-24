@@ -25,11 +25,7 @@ ui <- fluidPage(
 
 # server
 server <- function(input, output) {
-  # epipred_colorbar <- create_epipred_colorbar(nbars = 1000, void = TRUE, middle_color = "lightgrey")
-  epipred_colorbar <- create_epipred_colorbar2()
-  line_orientation <- "v"
-  
-  SingleVarServer("single_var", epipred_colorbar, line_orientation)
+  SingleVarServer("single_var")
   TableDisplayServer("table_display")
   AllVarServer("all_var")
 }

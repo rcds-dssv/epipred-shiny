@@ -12,7 +12,7 @@ epipred_class <- pull(test_var, EpiPred_Class)
 
 # display epipred score on the colorbar
 display_epipred_score <- function(
-    epipred_prediction, epipred_colorbar, line_orientation = "h") {
+    epipred_prediction, epipred_colorbar) {
   
   epi_score <- epipred_prediction$score
   
@@ -22,32 +22,27 @@ display_epipred_score <- function(
     text = c("Likely Benign", "Possibly Benign", "Possibly Pathogenic", "Likely Pathogenic")
   )
   
-  if (line_orientation == "h") {
-    g <- epipred_colorbar +
-      annotate(geom="point", y = epi_score, x = 0.60, size = 5, shape = 25, fill="red", color = "black", stroke = 1.4)
-  } else {
-    g <- epipred_colorbar +
-      annotate(
-        geom = "point", x = epi_score, y = 0.62,
-        size = 5, shape = 25, fill="red", color = "black",
-        stroke = 1.4
-      ) +
-      annotate(
-        geom = "text", x = epi_score, y = 0.75,
-        label = round(epi_score, 3), size = 8,
-        vjust = 0
-      ) +
-      geom_text(
-        data = classification_df,
-        aes(x = x, y = y, label = text),
-        size = 5,
-        vjust = 1
-      ) + 
-      theme(
-        text = element_text(face = "bold")
-      ) + 
-      ylim(-0.6, 1)
-  }
+  g <- epipred_colorbar +
+    annotate(
+      geom = "point", x = epi_score, y = 0.62,
+      size = 5, shape = 25, fill="red", color = "black",
+      stroke = 1.4
+    ) +
+    annotate(
+      geom = "text", x = epi_score, y = 0.75,
+      label = round(epi_score, 3), size = 8,
+      vjust = 0
+    ) +
+    geom_text(
+      data = classification_df,
+      aes(x = x, y = y, label = text),
+      size = 5,
+      vjust = 1
+    ) + 
+    theme(
+      text = element_text(face = "bold")
+    ) + 
+    ylim(-1, 1)
   
   return(g)
 }
@@ -94,8 +89,11 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
   return(g)
 }
 
-create_epipred_colorbar2 <- function(outline_width = 1,
-                                    void = TRUE) {
+# create a second type of colorbar where colors are based on the 
+# epipred prediction class - cleaner look
+create_epipred_colorbar2 <- function(
+    epi_dist_summary = NULL, distribution_type = "proportion", 
+    outline_width = 1, void = TRUE) {
   
   epi_colors <- epipred_score_color_ramp(c(0, 0.3, 0.7, 1))
   names(epi_colors) <- epi_colors
@@ -132,6 +130,13 @@ create_epipred_colorbar2 <- function(outline_width = 1,
     g <- g + theme_void()
   }
   
+  if (!is.null(epi_dist_summary)) {
+    g <- overlay_epi_distribution(
+      g, epi_dist_summary = epi_dist_summary, distribution_type = distribution_type,
+      size = 10, padding = 0.05
+    )
+  }
+  
   return(g)
 }
 
@@ -151,6 +156,62 @@ create_outline_data <- function(bar_width) {
     x = c(-bar_width/2,bar_width/2,bar_width/2,-bar_width/2,-bar_width/2,0),
     y = c(0,0,1,1,0,0)
   )
+}
+
+# calculate and save distribution summary of the EpiPred Raw score 
+# for chosen dataset
+get_epi_distribution_summary <- function(mutations) {
+  # get proportion of variants that fall into the predicted class
+  class_proportions <- mutations$EpiPred_Class %>%
+    factor(levels = c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic")) %>%
+    table() %>%
+    prop.table() %>%
+    `*`(100) %>%
+    round(2) %>%
+    format(nsmall = 2, scientific = FALSE) %>%
+    paste0("%") %>%
+    setNames(c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic"))
+  
+  # get kernel density estimate of the epipred score
+  epipred_kd <- density(mutations$EpiPred_Raw_Score, from = 0, to = 1, na.rm = TRUE, adjust=0.5)
+  
+  return(list(class_proportions = class_proportions, density = epipred_kd))
+}
+
+# draw distribution (either proportion or density) on top of the colorbar
+overlay_epi_distribution <- function(
+  g, epi_dist_summary, distribution_type = "proportion", 
+  size = 10, padding = 0.05
+) {
+  
+  if (distribution_type == "proportion") {
+    
+    class_prop_table <- data.frame(
+      x = c(0, 0.25, 0.5, 0.75) + 0.125,
+      y = 0,
+      prop = epi_dist_summary$class_proportions
+    )
+    
+    g <- g + 
+      geom_text(data = class_prop_table, aes(x = x, y = y, label = prop), size = 10)
+
+  } else if (distribution_type == "density") {
+    
+    density_table <- data.frame(
+      x = epi_dist_summary$density$x,
+      y = epi_dist_summary$density$y
+    ) %>%
+      mutate(
+        y = (y - min(y)),
+        y = y / max(y) * (1 - padding*2) - (0.5 - padding)
+      )
+    
+    g <- g + 
+      geom_line(data = density_table, aes(x = x, y = y), linewidth = 1)
+    
+  }
+  
+  return(g)
 }
 
 # revisit if current solution not performant
