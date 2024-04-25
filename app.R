@@ -1,5 +1,6 @@
 library(shiny)
 library(bslib)
+library(shinyWidgets)
 
 source("R/1-setup.R")
 source("R/2-modules.R")
@@ -10,18 +11,19 @@ source("R/6-allVarPlot.R")
 
 # contents of each tab are summarized into modules
 
-# ui
-ui <- fluidPage(
-  navbarPage(
-    "EpiPred",
-    tabPanel("Welcome Page", HomeUI("home")),
-    tabPanel("For Patients", SingleVarUI("single_var")),
-    tabPanel("For Researchers",
+# ui 
+ui <- page_fluid(
+  page_navbar(
+    title = "EpiPred",
+    nav_panel("Welcome Page", HomeUI("home")),
+    nav_panel("For Patients", SingleVarUI("single_var")),
+    nav_panel("For Researchers",
       AllVarUI("all_var"),
       hr(style = "border-top: 1px solid #000000;"),
       TableDisplayUI("table_display")
     )
-  ))
+  )
+)
 
 # server
 server <- function(input, output) {

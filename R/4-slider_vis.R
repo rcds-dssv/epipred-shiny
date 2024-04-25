@@ -36,11 +36,8 @@ display_epipred_score <- function(
     geom_text(
       data = classification_df,
       aes(x = x, y = y, label = text),
-      size = 5,
-      vjust = 1
-    ) + 
-    theme(
-      text = element_text(face = "bold")
+      size = 5.3, vjust = 1,
+      fontface = "bold"
     ) + 
     ylim(-1, 1)
   
@@ -116,7 +113,6 @@ create_epipred_colorbar2 <- function(
       show.legend = FALSE,) +
     scale_fill_manual(values = epi_colors) +
     xlim(0,1) +
-    ylim(-1,1) +
     # add outline
     geom_path(
       data = outline_data,

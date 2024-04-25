@@ -32,68 +32,92 @@ HomeUI <- function(id) {
 
 # Module for Single Missense Variant Prediction Tab
 SingleVarUI <- function(id) {
-  fixedPage(
+  page_fixed(
     titlePanel(h1("EpiPred Result Explorer", align = "center") ),
     
     br(),  
     
-    h2("Variant Input"),
-    hr(),
+    # Variant input header
+    layout_columns(
+      h2("Variant Input"),
+      col_widths = 12,
+      style='border-bottom: 1px solid #c6c7c7'
+    ),
     
     # Input for Amino Acid Sequence and Display prediction result
-    wellPanel(
-      fluidRow(
-        # control visualizations
-        column(1,
+    layout_columns(
+      card(
+        card_body(
+          p("Input Amino Acid Sequence", style="text-align: center;"),
+          textInput(NS(id,"val"), label = NULL, value = "p.A2P"),
+          actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
+          align = "center"
+        ),
+      ),
+      tooltip(
+        bs_icon("question-circle-fill", color = "grey"),
+        "Some Message",
+        placement = "bottom"
+      ),
+      col_widths = c(-4, 4, -3, 1)
+    ),
+    
+    br(),
+    
+    # result viewer header
+    layout_columns(
+      h2("Result Viewer"),
+      
+      # visualization control
+      dropdownButton(
+        radioButtons(NS(id,"epi_dist"), "Distribution in Colorbar",
+                     choices = c("proportion", "density"), selected = "proportion"
+        ),
+        
+        strong("Toggle 3-D Viewer Spin"),
+        br(),
+        switchInput(NS(id,"NGL_spin"), value = TRUE, size = "small"),
+        icon = bs_icon("gear"), width = "300px",
+        right = TRUE,
+        status = "info",
+        circle = FALSE,
+        size = "sm"
+      ),
+      col_widths = c(11,1),
+      style='border-bottom: 1px solid #c6c7c7'
+    ),
+    
+    # Epipred colorbar plot
+    layout_columns(
+      card(
+        card_header(
+          "Your Sequence's EpiPred Score", HTML('&nbsp;'),
           tooltip(
-            bs_icon("question-circle-fill", is = NS(id,"variant_tooltip")),
-            "Some Message",
+            bs_icon("question-circle-fill", color = "grey"),
+            "Colorbar Description",
             placement = "bottom"
           )
         ),
-        column(4, align = "center",
-          textInput(NS(id,"val"), "Input Amino Acid Sequence", value = "p.A2P"),
-          actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
-          offset = 3
-        ),
-      ),
-    ),
-    br(),
-    fluidRow(
-      column(10, h2("Result Viewer")),
-      column(2, align = "center",
-        dropdownButton(
-         radioButtons(NS(id,"epi_dist"), "Distribution in Colorbar",
-                      choices = c("proportion", "density"), selected = "proportion"
-         ),
-         
-         strong("Toggle 3-D Viewer Spin"),
-         br(),
-         switchInput(NS(id,"NGL_spin"), value = TRUE, size = "small"),
-         icon = icon("gear"), width = "300px",
-         right = TRUE,
-         status = "info",
-         circle = FALSE
+        card_body(
+          plotOutput(NS(id,"epipred_bar"), height = 260), width = "10%"
         )
-      )
-    ),
-    hr(),
-    
-    # color bar plot
-    h3("Your Sequence's EpiPred Score", align = "center"),
-    br(),
-    fluidRow(
-      column(
-        12, align = "center",
-        plotOutput(NS(id,"epipred_bar"), height = 260, width = 600)
       ),
-    ),
-    
-    # floaty protein
-    h3("3-D Rendering of Protein", align = "center"),
-    fluidRow(
-      column(8, NGLVieweROutput(NS(id,"structure")), offset = 2)
+      
+      # spinning protein
+      card(
+        card_header(
+          "3-D Rendering of Protein", HTML('&nbsp;'),
+          tooltip(
+            bs_icon("question-circle-fill", color = "grey"),
+            "Protein Description",
+            placement = "bottom"
+          )
+        ),
+        NGLVieweROutput(NS(id,"structure"))
+      ),
+      col_widths = c(12,12)
     )
+    
   )
 
 }
@@ -204,26 +228,30 @@ SingleVarServer <- function(id) {
 
 # Module for displaying Table for a given gene
 TableDisplayUI <- function(id) {
-  tagList(
+  page_fluid(
+    
+    # title
     titlePanel("Missense Variant Table"),
+    
+    # Display gene
     h3("Gene: STXBP1"),
-    fluidRow(
-      column(4,
-             selectInput(NS(id,"class"),
-                         "EpiPred Class:",
-                         c("All",unique(as.character(mutations$EpiPred_Class)))
-             )
+    
+    # display mutation table filter selection and data table
+    layout_columns(
+      selectInput(NS(id,"class"),
+                  "EpiPred Class:",
+                  c("All",unique(as.character(mutations$EpiPred_Class)))
       ),
-      column(4,
-             selectInput(NS(id,"report"),
-                         "Reported:",
-                         c("All",unique(as.character(mutations$Reported)))
-             )
-      )
+      selectInput(NS(id,"report"),
+                  "Reported:",
+                  c("All",unique(as.character(mutations$Reported)))
+      ),
+      card(DT::dataTableOutput(NS(id,"table")), height = 600),
       
-    ),
-    fluidRow(DT::dataTableOutput(NS(id,"table"))),
-    fluidRow(downloadButton(NS(id,"downloadData"), "Download"))
+      # download button
+      downloadButton(NS(id,"downloadData"), label = "Download"),
+      col_widths = c(4,4,-4,12,12)
+    )
   )
 }
 
@@ -239,7 +267,7 @@ TableDisplayServer <- function(id) {
         data <- data[data$Reported == input$report,]
       }
       data
-    }))
+    }) %>% formatStyle(colnames(mutations), "white-space"="nowrap"))
     
     #For Download Button
     selectedData <- reactive({
@@ -267,17 +295,24 @@ TableDisplayServer <- function(id) {
 
 # Module for exploring prediction result for all variants in a given gene
 AllVarUI <- function(id) {
-  tagList(
+  page_fixed(
+    # Title
     titlePanel("All Variants Summary"),
-    sidebarLayout(
-      sidebarPanel(
+    
+    layout_sidebar(
+      
+      # Controls for plot
+      sidebar = sidebar(
         selectInput(NS(id,"var1"), "x Variable", choices = scatterplot_vars, selected = scatterplot_vars[1]),
         selectInput(NS(id,"var2"), "y Variable", choices = scatterplot_vars, selected = scatterplot_vars[2]),
         selectInput(NS(id,"margin_type"), "Margin Plot Type", choices = c("density", "histogram", "boxplot", "violin", "densigram")),
-        checkboxGroupInput(NS(id,"report"), "Reported:", choices = report_source, selected = report_source)
+        checkboxGroupInput(NS(id,"report"), "Reported:", choices = report_source, selected = report_source),
+        bg = "#f5f5f5"
       ),
-      mainPanel(
-        plotOutput(NS(id,"marginal_plot")), height = "600px"
+      
+      # Display plot output
+      card(
+        plotOutput(NS(id,"marginal_plot"))
       )
     )
   )
