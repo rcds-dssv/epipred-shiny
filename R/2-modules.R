@@ -1,10 +1,15 @@
 
 # Module for the Home Tab
 HomeUI <- function(id) {
-  fluidRow(
-    column(10, align="center", offset = 1,
-           shiny::HTML("<br><br> <h1>EpiMVP</h1><br>"),
-           shiny::HTML("
+  page_fixed(
+    layout_columns(
+      card(
+        span(
+          p(shiny::img(src = "gene2mouse.jpg"), style = "text-align:center"),
+          h1("EpiMVP", style="text-align:center;")
+        ),
+        card_body(
+          shiny::HTML("
              <h5><p><div> 
                                  
                 An The Epilepsy Multiplatform Variant Prediction project is an NIH-sponsoredCenter Without Walls (CWOW) that will develop a modular, 
@@ -23,10 +28,10 @@ HomeUI <- function(id) {
                 
                 The manuscript detailing this work is available here and all code is freely available at the EpiMVP github.
              
-             </h5>"),
-           shiny::img(src = "gene2mouse.jpg")
-    ),
-    
+             </h5>")
+        )
+      )
+    )
   )
 }
 
@@ -122,15 +127,15 @@ SingleVarUI <- function(id) {
 
 }
 
-SingleVarServer <- function(id) {
+SingleVarServer <- function(id, mutations) {
   moduleServer(id, function(input, output, session) {
     
     # used for plotting the colorbar in "for patients" tab
-    epi_dist_summary <- get_epi_distribution_summary(mutations)
+    epi_dist_summary <- reactive(get_epi_distribution_summary(mutations()))
     
     epipred_colorbar <- reactive(
       create_epipred_colorbar2(
-        epi_dist_summary = epi_dist_summary,
+        epi_dist_summary = epi_dist_summary(),
         distribution_type = input$epi_dist
       )
     )
@@ -143,14 +148,14 @@ SingleVarServer <- function(id) {
     })
     variant_id <- reactiveVal()
     observe({
-      if (variant_id_tmp() %in% mutations$AA_Change) {
+      if (variant_id_tmp() %in% mutations()$AA_Change) {
         variant_id(variant_id_tmp())
       }
     })
     
     # retrieve prediction result for chosen variant
     epipred_prediction <- reactive({
-      get_epipred_prediction(variant_id(), mutations)
+      get_epipred_prediction(variant_id(), mutations())
     })
     
     # NGLViewer Output
@@ -173,7 +178,7 @@ SingleVarServer <- function(id) {
     
     # when variant is updated, highlight the affected residue
     observeEvent(input$update, {
-      aa_pos <- mutations %>%
+      aa_pos <- mutations() %>%
         filter(AA_Change %in% variant_id()) %>%
         pull(AA_POS) %>% 
         min() %>%
@@ -191,7 +196,7 @@ SingleVarServer <- function(id) {
     
     # variant prediction text output
     output$text <- renderText({
-      data <- data.frame(mutations)
+      data <- data.frame(mutations())
       paste(
         "Pathogenic Score is:",
         toString(epipred_prediction()$score),
@@ -211,10 +216,10 @@ SingleVarServer <- function(id) {
     # plot position vs score
     output$epi_score_indiv_plot <- renderPlot({
       if (input$report_gg != "All") {
-        mutations_filtered <- mutations %>%
+        mutations_filtered <- mutations() %>%
           filter(Reported == input$report_gg)
       } else {
-        mutations_filtered <- mutations
+        mutations_filtered <- mutations()
       }
       plot_epi_raw_violinplot(
         var_id = variant_id(),
@@ -255,11 +260,11 @@ TableDisplayUI <- function(id) {
   )
 }
 
-TableDisplayServer <- function(id) {
+TableDisplayServer <- function(id, mutations) {
   moduleServer(id, function(input, output, session) {
     # Filter data table based on selections
     output$table <- DT::renderDataTable(DT::datatable({
-      data <- data.frame(mutations)
+      data <- data.frame(mutations())
       if (input$class != "All") {
         data <- data[data$EpiPred_Class == input$class,]
       }
@@ -267,11 +272,11 @@ TableDisplayServer <- function(id) {
         data <- data[data$Reported == input$report,]
       }
       data
-    }) %>% formatStyle(colnames(mutations), "white-space"="nowrap"))
+    }) %>% formatStyle(colnames(mutations()), "white-space"="nowrap"))
     
     #For Download Button
     selectedData <- reactive({
-      data <- data.frame(mutations)
+      data <- data.frame(mutations())
       if (input$class != "All") {
         data <- data[data$EpiPred_Class == input$class,]
       }
@@ -318,12 +323,12 @@ AllVarUI <- function(id) {
   )
 }
 
-AllVarServer <- function(id) {
+AllVarServer <- function(id, mutations) {
   moduleServer(id, function(input,output,session) {
     output$marginal_plot <- renderPlot({
       req(length(input$report) > 0)
       marginal_plot(
-        mutations = mutations,
+        mutations = mutations(),
         var1 = input$var1,
         var2 = input$var2,
         margin_type = input$margin_type,
