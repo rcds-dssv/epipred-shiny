@@ -1,4 +1,25 @@
 
+overall_help_text <- 
+  "
+  EpiPred predicts the pathogenicity of your amino acid (AA) sequence.
+  Input your AA sequence ID and look at your score!
+  
+  sasdfasdfasdfasdf
+  
+  asdfasdfadfssdfasf
+  "
+colorbar_help_text <- 
+  "
+  Predicted score of your amino acid is displayed here.
+  Numbers inside each class indicate proportion of variants
+  with predicted class.
+  "
+protein_help_text <- 
+  "
+  3-D rendering of the protein (product of a gene) is shown here.
+  Location of the mutation is highlighted by a white blob.
+  "
+
 # Module for the Home Tab
 HomeUI <- function(id) {
   page_fixed(
@@ -51,6 +72,10 @@ SingleVarUI <- function(id) {
     
     # Input for Amino Acid Sequence and Display prediction result
     layout_columns(
+      popover(
+        a("How do I use this?"),
+        overall_help_text
+      ),
       card(
         card_body(
           p("Input Amino Acid Sequence", style="text-align: center;"),
@@ -64,7 +89,7 @@ SingleVarUI <- function(id) {
         "Some Message",
         placement = "bottom"
       ),
-      col_widths = c(-4, 4, -3, 1)
+      col_widths = c(3, -1, 4, -3, 1)
     ),
     
     br(),
@@ -75,8 +100,11 @@ SingleVarUI <- function(id) {
       
       # visualization control
       dropdownButton(
-        radioButtons(NS(id,"epi_dist"), "Distribution in Colorbar",
-                     choices = c("proportion", "density"), selected = "proportion"
+        strong("Distribution in Colorbar"),
+        br(),
+        radioButtons(
+          NS(id,"epi_dist"), label = NULL,
+          choices = c("proportion", "density"), selected = "proportion"
         ),
         
         strong("Toggle 3-D Viewer Spin"),
@@ -99,8 +127,8 @@ SingleVarUI <- function(id) {
           "Your Sequence's EpiPred Score", HTML('&nbsp;'),
           tooltip(
             bs_icon("question-circle-fill", color = "grey"),
-            "Colorbar Description",
-            placement = "bottom"
+            colorbar_help_text,
+            placement = "right"
           )
         ),
         card_body(
@@ -114,8 +142,8 @@ SingleVarUI <- function(id) {
           "3-D Rendering of Protein", HTML('&nbsp;'),
           tooltip(
             bs_icon("question-circle-fill", color = "grey"),
-            "Protein Description",
-            placement = "bottom"
+            protein_help_text,
+            placement = "right"
           )
         ),
         NGLVieweROutput(NS(id,"structure"))
