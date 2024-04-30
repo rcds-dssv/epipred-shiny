@@ -3,20 +3,16 @@ overall_help_text <-
   "
   EpiPred predicts the pathogenicity of your amino acid (AA) sequence.
   Input your AA sequence ID and look at your score!
-  
-  sasdfasdfasdfasdf
-  
-  asdfasdfadfssdfasf
   "
 colorbar_help_text <- 
   "
-  Predicted score of your amino acid is displayed here.
+  Predicted score of your amino acid is displayed here\n
   Numbers inside each class indicate proportion of variants
   with predicted class.
   "
 protein_help_text <- 
   "
-  3-D rendering of the protein (product of a gene) is shown here.
+  3-D rendering of the protein (product of a gene) is shown here.\n
   Location of the mutation is highlighted by a white blob.
   "
 

@@ -34,20 +34,22 @@ ui <- page_fluid(
       conditionalPanel(
         condition = "input.tabs != 'welcome_page'",
         br(),
-        layout_column_wrap(
-          card(
-            card_body(
-              selectInput(
-                "gene", 
-                label = "Gene Select", 
-                choices = c("STXBP1"), 
-                selected = "STXBP1"),
+        page_fixed(
+          layout_column_wrap(
+            card(
+              card_body(
+                selectInput(
+                  "gene", 
+                  label = "Gene Select", 
+                  choices = c("STXBP1"), 
+                  selected = "STXBP1"),
+                style = "overflow: visible !important;"
+              ),
               style = "overflow: visible !important;"
             ),
-            style = "overflow: visible !important;"
-          ),
-          width = "300px",
-          fixed_width = TRUE
+            width = "300px",
+            fixed_width = TRUE
+          )
         )
       )
   )
