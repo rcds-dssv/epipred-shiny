@@ -262,9 +262,6 @@ TableDisplayUI <- function(id) {
     # title
     titlePanel("Missense Variant Table"),
     
-    # Display gene
-    h3("Gene: STXBP1"),
-    
     # display mutation table filter selection and data table
     layout_columns(
       selectInput(NS(id,"class"),

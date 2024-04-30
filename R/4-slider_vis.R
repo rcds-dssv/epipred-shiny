@@ -110,7 +110,7 @@ create_epipred_colorbar2 <- function(
       xmin = xmin, xmax = xmax,
       ymin = ymin, ymax = ymax,
       fill = color),
-      show.legend = FALSE,) +
+      show.legend = FALSE, alpha = 0.8) +
     scale_fill_manual(values = epi_colors) +
     xlim(0,1) +
     # add outline
