@@ -1,3 +1,20 @@
+# Utility functions
+
+clean_mutations <- function(mutations) {
+  # clean up the mutations data frame
+  mutations <- mutations %>%
+    mutate(
+      Reported = ifelse(Reported == "simluation only", "simulation only", Reported),
+      EpiPred_Class = factor(
+        EpiPred_Class,
+        levels = c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic")
+      ),
+      id = row_number() # id only used for internal row identification
+    )
+  
+  return(mutations)
+}
+
 # Function for retrieving epipred score
 get_epipred_prediction <- function(var_id, mutations) {
   if (length(var_id) > 1) {

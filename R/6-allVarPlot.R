@@ -73,22 +73,50 @@ score_v_position <- function(mutations, score) {
 marginal_plot <- function(
     mutations, var1, var2, 
     margin_type = "density", 
-    reported = c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only")
+    reported = c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only"),
+    color_group = "Reported",
+    highlight_id = NULL
 ) {
   # create color mapping for report source
   reported_sources <- c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only")
   reported_colormap <- brewer.pal(length(reported_sources), "Set2")
   names(reported_colormap) <- reported_sources
   
+  # create color mapping for Epipred Class
+  epipred_classes <- c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic")
+  epipred_class_colormap <- epipred_score_color_ramp(c(0, 0.3, 0.7, 1))
+  names(epipred_class_colormap) <- epipred_classes
+  
+  if (color_group == "Reported") {
+    colormap <- reported_colormap
+  } else if (color_group == "EpiPred_Class") {
+    colormap <- epipred_class_colormap
+  } else {
+    stop("Error in marginal_plot: invalid color_group")
+  }
+  
   # subset data to included select reported source
   subset_data <- mutations %>% filter(Reported %in% reported)
   
   # create main scatter plot
   g <- ggplot(subset_data) +
-    geom_point(aes(x = .data[[var1]], y = .data[[var2]], color = Reported)) +
-    scale_discrete_manual(aesthetics = "color", values = reported_colormap) +
+    geom_point(aes(x = .data[[var1]], y = .data[[var2]], color = .data[[color_group]])) +
+    scale_discrete_manual(aesthetics = "color", values = colormap) +
     theme_bw() +
     theme(legend.position = "bottom")
+  
+  if (any(highlight_id %in% subset_data$id)) {
+    highlight_id <- highlight_id[highlight_id %in% subset_data$id]
+    
+    highlighted <- subset_data$id %in% highlight_id
+    
+    highlight_x <- subset_data[[var1]][highlighted]
+    highlight_y <- subset_data[[var2]][highlighted]
+    highlight_fill <- colormap[as.character(subset_data[[color_group]][highlighted])]
+    
+    g <- g + 
+      annotate("point", x = highlight_x, y = highlight_y, fill = highlight_fill, size = 5, pch = 21, color = "black", stroke = 1.3)
+  }
   
   # apply marginal plot
   gmarg <- ggMarginal(g, type = margin_type, margins = "both", groupColour = TRUE, groupFill = TRUE)

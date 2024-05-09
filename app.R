@@ -40,9 +40,7 @@ server <- function(input, output) {
   # # for debugging
   # observeEvent(input$test, {
   #   print("Testing...")
-  #   print(gene())
-  #   print(singlevarserver_selected())
-  #   print(tabledisplay_selected())
+  #   print(paste(dt_selected_index()))
   # })
 
   gene <- reactiveVal("STXBP1")
@@ -52,18 +50,20 @@ server <- function(input, output) {
     # pretend we are using the gene input -- will need to uncomment this when more genes are added
     # mutations_ <- read.csv(file.path("data",paste0(gene(), "_DTv2.csv")))
     
-    # fix typo
-    mutations_$Reported <- ifelse(mutations_$Reported == "simluation only", "simulation only", mutations_$Reported)
-    mutations_
+    # clean up mutations data
+    clean_mutations(mutations_)
   })
+  
+  # reactive variable for selecting row entry
+  dt_selected_index <- reactiveVal(NULL)
   
   singlevarserver_selected <- reactive(input$tabs == "for_patients")
   tabledisplay_selected <- reactive(input$tabs == "for_researchers")
   allvarserver_selected <- reactive(input$tabs == "for_researchers")
   
   SingleVarServer("single_var", mutations, gene, singlevarserver_selected)
-  TableDisplayServer("table_display", mutations, tabledisplay_selected)
-  AllVarServer("all_var", mutations, gene, allvarserver_selected)
+  TableDisplayServer("table_display", mutations, tabledisplay_selected, dt_selected_index)
+  AllVarServer("all_var", mutations, gene, allvarserver_selected, dt_selected_index)
 }
 
 shinyApp(ui,server)

@@ -315,21 +315,9 @@ TableDisplayUI <- function(id) {
   )
 }
 
-TableDisplayServer <- function(id, mutations, selected) {
+TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
   moduleServer(id, function(input, output, session) {
     # Filter data table based on selections
-    output$table <- DT::renderDataTable(DT::datatable({
-      data <- data.frame(mutations())
-      if (input$class != "All") {
-        data <- data[data$EpiPred_Class == input$class,]
-      }
-      if (input$report != "All") {
-        data <- data[data$Reported == input$report,]
-      }
-      data
-    }) %>% formatStyle(colnames(mutations()), "white-space"="nowrap"))
-    
-    # For Download Button
     selectedData <- reactive({
       data <- data.frame(mutations())
       if (input$class != "All") {
@@ -341,13 +329,27 @@ TableDisplayServer <- function(id, mutations, selected) {
       data
     })
     
+    # data table output
+    output$table <- DT::renderDataTable({
+      selectedData() %>%
+        select(-id) %>%
+        DT::datatable() %>% 
+        formatStyle(colnames(selectedData() %>% select(-id)), "white-space" = "nowrap")
+    })
+    
+    # update selected id
+    observe({
+      dt_selected_index(selectedData()[input$table_rows_selected,]$id)
+    })
+    
+    
     # Downloadable csv of selected dataset ----
     output$downloadData <- downloadHandler(
       filename = function() {
         paste("Table_Out",Sys.Date(),".csv", sep = "")
       },
       content = function(file) {
-        write.csv(selectedData(), file, row.names = FALSE)
+        write.csv(selectedData() %>% select(-id), file, row.names = FALSE)
       }
     )
   })
@@ -370,14 +372,15 @@ AllVarUI <- function(id) {
       sidebar = sidebar(
         selectInput(
           NS(id,"gene"),
-          label = "Gene",
+          label = strong("Gene"),
           choices = genes_avail,
           selected = NULL
         ),
-        selectInput(NS(id,"var1"), "x Variable", choices = scatterplot_vars, selected = scatterplot_vars[1]),
-        selectInput(NS(id,"var2"), "y Variable", choices = scatterplot_vars, selected = scatterplot_vars[2]),
-        selectInput(NS(id,"margin_type"), "Margin Plot Type", choices = c("density", "histogram", "boxplot", "violin", "densigram")),
-        checkboxGroupInput(NS(id,"report"), "Reported:", choices = report_source, selected = report_source),
+        selectInput(NS(id,"var1"), strong("x Variable"), choices = scatterplot_vars, selected = scatterplot_vars[1]),
+        selectInput(NS(id,"var2"), strong("y Variable"), choices = scatterplot_vars, selected = scatterplot_vars[2]),
+        selectInput(NS(id,"margin_type"), strong("Margin Plot Type"), choices = c("density", "histogram", "boxplot", "violin", "densigram")),
+        radioButtons(NS(id,"color_group"), strong("Color By"), choices = c("Reported" = "Reported", "EpiPred Class" = "EpiPred_Class")),
+        checkboxGroupInput(NS(id,"report"), strong("Reported"), choices = report_source, selected = report_source),
         bg = "#f5f5f5"
       ),
       
@@ -389,7 +392,7 @@ AllVarUI <- function(id) {
   )
 }
 
-AllVarServer <- function(id, mutations, gene, selected) {
+AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
   moduleServer(id, function(input,output,session) {
     
     # update gene reactive variable based on input
@@ -418,7 +421,9 @@ AllVarServer <- function(id, mutations, gene, selected) {
         var1 = input$var1,
         var2 = input$var2,
         margin_type = input$margin_type,
-        reported = input$report
+        reported = input$report,
+        color_group = input$color_group,
+        highlight_id = dt_selected_index()
       )
     })
   })
