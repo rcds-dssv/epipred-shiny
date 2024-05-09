@@ -11,6 +11,8 @@ library(ggpubr)
 library(ggExtra)
 library(bsicons)
 
+genes_avail <- c("STXBP1", "GENE1", "GENE2")
+
 # mutations <- read.csv(file.path("data","STXBP1_DTv2.csv"))
 vars <- c('EpiPred_Raw_Score','CADD_PHRED')
 
@@ -25,4 +27,12 @@ scatterplot_vars <- c(
   "CADD Score" = "CADD_PHRED",
   "Amino Acid Position" = "AA_POS"
 )
-reported_sources <- c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only")
+reported_sources <- c(
+  "GnomAD", "Reported VUS",
+  "Patient-specific (P/LP)", "simulation only"
+)
+
+epipred_class <- c(
+  "Likely benign", "Possibly benign", 
+  "Possibly pathogenic", "Likely pathogenic"
+)

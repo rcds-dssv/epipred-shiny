@@ -3,12 +3,12 @@
 
 library(grid)
 
-# Test data
-test_var_id <- "p.A2P"
-test_var <- mutations %>%
-  filter(AA_Change == test_var_id)
-epipred_raw_score <- pull(test_var, EpiPred_Raw_Score)
-epipred_class <- pull(test_var, EpiPred_Class)
+# # Test data
+# test_var_id <- "p.A2P"
+# test_var <- mutations %>%
+#   filter(AA_Change == test_var_id)
+# epipred_raw_score <- pull(test_var, EpiPred_Raw_Score)
+# epipred_class <- pull(test_var, EpiPred_Class)
 
 # display epipred score on the colorbar
 display_epipred_score <- function(

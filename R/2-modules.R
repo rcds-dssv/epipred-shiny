@@ -59,19 +59,35 @@ SingleVarUI <- function(id) {
     
     br(),  
     
-    # Variant input header
+    # Gene input header
     layout_columns(
-      h2("Variant Input"),
+      h2("Gene and Sequence Input"),
       col_widths = 12,
-      style='border-bottom: 1px solid #c6c7c7'
+      style = 'border-bottom: 1px solid #c6c7c7'
+    ),
+    layout_columns(
+      popover(
+        p("How do I use this?",  style = "font-size:12px;"),
+        overall_help_text
+      ),
+      card(
+        card_body(
+          p("Gene Select", style="text-align: center;"),
+          selectInput(
+            NS(id,"gene"),
+            label = NULL,
+            choices = genes_avail,
+            selected = NULL
+          ),
+          style = "overflow: visible !important;"
+        ),
+        style = "overflow: visible !important;"
+      ),
+      col_widths = c(2,-2,4,-4)
     ),
     
     # Input for Amino Acid Sequence and Display prediction result
     layout_columns(
-      popover(
-        a("How do I use this?"),
-        overall_help_text
-      ),
       card(
         card_body(
           p("Input Amino Acid Sequence", style="text-align: center;"),
@@ -85,7 +101,7 @@ SingleVarUI <- function(id) {
         "Some Message",
         placement = "bottom"
       ),
-      col_widths = c(3, -1, 4, -3, 1)
+      col_widths = c(-4, 4, -3, 1)
     ),
     
     br(),
@@ -151,8 +167,26 @@ SingleVarUI <- function(id) {
 
 }
 
-SingleVarServer <- function(id, mutations) {
+SingleVarServer <- function(id, mutations, gene, selected) {
   moduleServer(id, function(input, output, session) {
+    
+    # update gene reactive variable based on input
+    observeEvent(input$gene,{
+      gene(input$gene)
+    })
+    
+    # reactively update gene input based on selection
+    # this keeps the gene up to date with the other tab
+    observe({
+      req(!selected())
+      updateSelectInput(
+        session = session,
+        inputId = "gene",
+        label = NULL,
+        selected = gene(),
+        choices = genes_avail
+      )
+    })
     
     # used for plotting the colorbar in "for patients" tab
     epi_dist_summary <- reactive(get_epi_distribution_summary(mutations()))
@@ -266,11 +300,11 @@ TableDisplayUI <- function(id) {
     layout_columns(
       selectInput(NS(id,"class"),
                   "EpiPred Class:",
-                  c("All",unique(as.character(mutations$EpiPred_Class)))
+                  c("All",epipred_class)
       ),
       selectInput(NS(id,"report"),
                   "Reported:",
-                  c("All",unique(as.character(mutations$Reported)))
+                  c("All",reported_sources)
       ),
       card(DT::dataTableOutput(NS(id,"table")), height = 600),
       
@@ -281,7 +315,7 @@ TableDisplayUI <- function(id) {
   )
 }
 
-TableDisplayServer <- function(id, mutations) {
+TableDisplayServer <- function(id, mutations, selected) {
   moduleServer(id, function(input, output, session) {
     # Filter data table based on selections
     output$table <- DT::renderDataTable(DT::datatable({
@@ -295,7 +329,7 @@ TableDisplayServer <- function(id, mutations) {
       data
     }) %>% formatStyle(colnames(mutations()), "white-space"="nowrap"))
     
-    #For Download Button
+    # For Download Button
     selectedData <- reactive({
       data <- data.frame(mutations())
       if (input$class != "All") {
@@ -325,10 +359,21 @@ AllVarUI <- function(id) {
     # Title
     titlePanel("All Variants Summary"),
     
+    # layout_columns(
+    #   uiOutput(NS(id,"gene_select")),
+    #   col_widths = c(4,-8)
+    # ),
+    
     layout_sidebar(
       
       # Controls for plot
       sidebar = sidebar(
+        selectInput(
+          NS(id,"gene"),
+          label = "Gene",
+          choices = genes_avail,
+          selected = NULL
+        ),
         selectInput(NS(id,"var1"), "x Variable", choices = scatterplot_vars, selected = scatterplot_vars[1]),
         selectInput(NS(id,"var2"), "y Variable", choices = scatterplot_vars, selected = scatterplot_vars[2]),
         selectInput(NS(id,"margin_type"), "Margin Plot Type", choices = c("density", "histogram", "boxplot", "violin", "densigram")),
@@ -344,8 +389,28 @@ AllVarUI <- function(id) {
   )
 }
 
-AllVarServer <- function(id, mutations) {
+AllVarServer <- function(id, mutations, gene, selected) {
   moduleServer(id, function(input,output,session) {
+    
+    # update gene reactive variable based on input
+    observeEvent(input$gene,{
+      gene(input$gene)
+    })
+    
+    # reactively update gene input based on selection
+    # this keeps the gene up to date with the other tab
+    observe({
+      req(!selected())
+      updateSelectInput(
+        session = session,
+        inputId = "gene",
+        label = NULL,
+        selected = gene(),
+        choices = genes_avail
+      )
+    })
+    
+    # marginal plot output
     output$marginal_plot <- renderPlot({
       req(length(input$report) > 0)
       marginal_plot(
