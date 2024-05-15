@@ -121,6 +121,8 @@ marginal_plot <- function(
   # apply marginal plot
   gmarg <- ggMarginal(g, type = margin_type, margins = "both", groupColour = TRUE, groupFill = TRUE)
   
+  
+  
   return(gmarg)
 }
 

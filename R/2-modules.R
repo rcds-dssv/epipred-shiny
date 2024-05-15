@@ -1,20 +1,42 @@
 
-overall_help_text <- 
+overall_help_text <- HTML(
   "
-  EpiPred predicts the pathogenicity of your amino acid (AA) sequence.
-  Input your AA sequence ID and look at your score!
+  <p>This page displays information about your amino acid (AA) sequence.</p>
+  
+  <p>If you already have a gene and its AA sequence ID in mind, you can input your sequence in the box below.</p>
+  
+  <p>To change settings for the visualizations, click on the gear icon next to the \"Result Viewer\".</p>
   "
-colorbar_help_text <- 
+)
+  
+colorbar_help_text1 <- 
   "
-  Predicted score of your amino acid is displayed here\n
-  Numbers inside each class indicate proportion of variants
-  with predicted class.
+  Predicted score of your amino acid is displayed here.\n
+  Numbers inside each class indicate proportion of the possible sequences
+  that fall in predicted class.
   "
+colorbar_help_text2 <- 
+  "
+  Predicted score of your amino acid is displayed here.\n
+  The shape inside the bar shows the distribution of score across all the possible sequences in the gene.
+  "
+
 protein_help_text <- 
   "
   3-D rendering of the protein (product of a gene) is shown here.\n
   Location of the mutation is highlighted by a white blob.
   "
+
+allvar_help_text <- HTML(
+  "
+  <p>In this tab, you can choose to explore across different genes and compare positions and various scores.
+  Use the control on the left to select the gene explore relationships</p>
+     
+  <p>The table below shows all the missense variants in the gene. You can filter the table by EpiPred class
+  and Reported source. Clicking on a row highlights the mutation in the plot above.</p>
+  
+  <p> You can also download the table by clicking the download button below the table.</p>"
+)
 
 # Module for the Home Tab
 HomeUI <- function(id) {
@@ -58,6 +80,14 @@ SingleVarUI <- function(id) {
     titlePanel(h1("EpiPred Result Explorer", align = "center") ),
     
     br(),  
+    accordion(
+      accordion_panel(
+        "Need help?",
+        overall_help_text
+      ),
+      open = TRUE
+    ),
+    br(),
     
     # Gene input header
     layout_columns(
@@ -65,11 +95,20 @@ SingleVarUI <- function(id) {
       col_widths = 12,
       style = 'border-bottom: 1px solid #c6c7c7'
     ),
+    
+    
+    tags$style(".btn-infoCustom {background-color: #4E2A84; color: #FFF}"),
     layout_columns(
-      popover(
-        p("How do I use this?",  style = "font-size:12px;"),
-        overall_help_text
-      ),
+      # popover(
+      #   p("How do I use this?",  style = "font-size:12px;"),
+      #   overall_help_text
+      # ),
+      # dropdownButton(
+      #   overall_help_text,
+      #   circle = FALSE,
+      #   status = "infoCustom",
+      #   label = "What is this?"
+      # ),
       card(
         card_body(
           p("Gene Select", style="text-align: center;"),
@@ -83,7 +122,7 @@ SingleVarUI <- function(id) {
         ),
         style = "overflow: visible !important;"
       ),
-      col_widths = c(2,-2,4,-4)
+      col_widths = c(-4,4,-4)
     ),
     
     # Input for Amino Acid Sequence and Display prediction result
@@ -96,12 +135,7 @@ SingleVarUI <- function(id) {
           align = "center"
         ),
       ),
-      tooltip(
-        bs_icon("question-circle-fill", color = "grey"),
-        "Some Message",
-        placement = "bottom"
-      ),
-      col_widths = c(-4, 4, -3, 1)
+      col_widths = c(-4, 4, -4)
     ),
     
     br(),
@@ -124,7 +158,7 @@ SingleVarUI <- function(id) {
         switchInput(NS(id,"NGL_spin"), value = TRUE, size = "small"),
         icon = bs_icon("gear"), width = "300px",
         right = TRUE,
-        status = "info",
+        status = "infoCustom",
         circle = FALSE,
         size = "sm"
       ),
@@ -139,7 +173,7 @@ SingleVarUI <- function(id) {
           "Your Sequence's EpiPred Score", HTML('&nbsp;'),
           tooltip(
             bs_icon("question-circle-fill", color = "grey"),
-            colorbar_help_text,
+            textOutput(NS(id,"colorbar_help_text")),
             placement = "right"
           )
         ),
@@ -169,6 +203,14 @@ SingleVarUI <- function(id) {
 
 SingleVarServer <- function(id, mutations, gene, selected) {
   moduleServer(id, function(input, output, session) {
+    
+    output$colorbar_help_text <- renderText({
+      if (input$epi_dist == "proportion") {
+        colorbar_help_text1
+      } else {
+        colorbar_help_text2
+      }
+    })
     
     # update gene reactive variable based on input
     observeEvent(input$gene,{
@@ -361,10 +403,15 @@ AllVarUI <- function(id) {
     # Title
     titlePanel("All Variants Summary"),
     
-    # layout_columns(
-    #   uiOutput(NS(id,"gene_select")),
-    #   col_widths = c(4,-8)
-    # ),
+    accordion(
+      accordion_panel(
+        "Need help?",
+        allvar_help_text
+      ),
+      open = TRUE
+    ),
+    
+    br(),
     
     layout_sidebar(
       
