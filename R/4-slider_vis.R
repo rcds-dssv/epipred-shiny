@@ -12,31 +12,42 @@ library(grid)
 
 # display epipred score on the colorbar
 display_epipred_score <- function(
-    epipred_prediction, epipred_colorbar) {
+    epipred_prediction, epipred_colorbar, bar_height = 1,
+    classification_label_inside = FALSE
+  ) {
   
+  # extract score
   epi_score <- epipred_prediction$score
   
+  # create a data frame with classification labels and their cutoffs
+  # for use on the colorbar
   classification_df <- data.frame(
     x = c(0.125, 0.375, 0.625, 0.875),
-    y = c(-0.55, -0.55, -0.55, -0.55),
-    text = c("Likely Benign", "Possibly Benign", "Possibly Pathogenic", "Likely Pathogenic")
+    text = c("Likely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic")
   )
+  if (classification_label_inside) {
+    classification_df$y <- 0
+    label_vjust <- 0.5
+  } else {
+    classification_df$y <- -(bar_height / 2) - 0.05
+    label_vjust <- 1
+  }
   
   g <- epipred_colorbar +
     annotate(
-      geom = "point", x = epi_score, y = 0.62,
+      geom = "point", x = epi_score, y = bar_height/2 + 0.13,
       size = 5, shape = 25, fill="red", color = "black",
       stroke = 1.4
     ) +
     annotate(
-      geom = "text", x = epi_score, y = 0.75,
+      geom = "text", x = epi_score, y = bar_height/2 + 0.25,
       label = round(epi_score, 3), size = 8,
       vjust = 0
     ) +
     geom_text(
       data = classification_df,
       aes(x = x, y = y, label = text),
-      size = 5.3, vjust = 1,
+      size = 6, vjust = label_vjust,
       fontface = "bold"
     ) + 
     ylim(-1, 1)
@@ -89,19 +100,20 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
 # create a second type of colorbar where colors are based on the 
 # epipred prediction class - cleaner look
 create_epipred_colorbar2 <- function(
+    bar_height = 1,
     epi_dist_summary = NULL, distribution_type = "proportion", 
     outline_width = 1, void = TRUE) {
   
   epi_colors <- epipred_score_color_ramp(c(0, 0.3, 0.7, 1))
   names(epi_colors) <- epi_colors
   
-  outline_data <- create_outline_data(1)
+  outline_data <- create_outline_data(bar_height)
   
   rect_data <- data.frame(
     xmin = c(0, 0.25, 0.5, 0.75),
     xmax = c(0.25, 0.5, 0.75, 1),
-    ymin = rep(-1/2, 4),
-    ymax = rep(1/2, 4),
+    ymin = rep(-bar_height / 2, 4),
+    ymax = rep(bar_height / 2, 4),
     color = epi_colors
   )
   
@@ -112,7 +124,10 @@ create_epipred_colorbar2 <- function(
       fill = color),
       show.legend = FALSE, alpha = 0.8) +
     scale_fill_manual(values = epi_colors) +
-    xlim(0,1) +
+    annotate(
+      geom = "text", x = c(0-0.03, 1 + 0.03), y = 0,
+      label = c("0","1"), fontface = "bold", size = 6
+    ) +
     # add outline
     geom_path(
       data = outline_data,
@@ -120,6 +135,7 @@ create_epipred_colorbar2 <- function(
       linewidth = outline_width,
       linejoin = "mitre"
     )
+    
 
   if (void) {
     # remove all graphical elements except the bar
@@ -162,11 +178,7 @@ get_epi_distribution_summary <- function(mutations) {
     factor(levels = c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic")) %>%
     table() %>%
     prop.table() %>%
-    `*`(100) %>%
-    round(2) %>%
-    format(nsmall = 2, scientific = FALSE) %>%
-    paste0("%") %>%
-    setNames(c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic"))
+    c()
   
   # get kernel density estimate of the epipred score
   epipred_kd <- density(mutations$EpiPred_Raw_Score, from = 0, to = 1, na.rm = TRUE, adjust=0.5)
@@ -181,6 +193,14 @@ overlay_epi_distribution <- function(
 ) {
   
   if (distribution_type == "proportion") {
+    
+    epi_dist_summary$class_proportions <- epi_dist_summary$class_proportions %>%
+      `*`(100) %>%
+      round(0) %>%
+      format(nsmall = 0, scientific = FALSE) %>%
+      paste0("%") %>%
+      setNames(c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic"))
+    
     
     class_prop_table <- data.frame(
       x = c(0, 0.25, 0.5, 0.75) + 0.125,
@@ -209,6 +229,7 @@ overlay_epi_distribution <- function(
   
   return(g)
 }
+
 
 # revisit if current solution not performant
 ## What if we try to use the bar image as background and plot on top?
