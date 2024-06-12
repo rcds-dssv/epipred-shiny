@@ -41,7 +41,7 @@ display_epipred_score <- function(
     ) +
     annotate(
       geom = "text", x = epi_score, y = bar_height/2 + 0.25,
-      label = round(epi_score, 3), size = 8,
+      label = round(epi_score, 2), size = 8,
       vjust = 0
     ) +
     geom_text(

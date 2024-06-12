@@ -35,6 +35,18 @@ overall_help_text <- HTML(
   <p>
     In this tab, you can search for Amino Acid (AA) sequences from epilepsy-associated genes with a missense variant (mutation).
     The output is an EpiPred raw score and prediction on the sequence's pathogenicity (whether it is likely to cause epilepsy).
+  </p>
+  
+  <strong>What is a missense variant?</strong>
+  
+  <p>
+    A missense variant is a type of mutation in which a change in your DNA sequence can cause an amino acid in a protein to change to a different one.
+    This type of mutation can be benign or pathogenic, depending on the location of the mutation and the resulting change in the protein's function.
+  </p>
+  
+  <strong>What is EpiPred?</strong>
+  
+  <p>
     EpiPred is a machine learning model specifically trained for classification of missense variants as likely pathogenic or benign.
   </p>
   
@@ -56,31 +68,24 @@ overall_help_text <- HTML(
   
 colorbar_help_text1 <- 
   "
-  Predicted score of your amino acid is displayed here.\n
-  Numbers inside each class indicate proportion of the possible sequences
-  that fall in predicted class.
-  "
-colorbar_help_text2 <- 
-  "
-  Predicted score of your amino acid is displayed here.\n
-  The shape inside the bar shows the distribution of score across all the possible sequences in the gene.
+  Predicted score and class of your amino acid is displayed here.
   "
 
 protein_help_text <- 
   "
-  3-D rendering of the protein (product of a gene) is shown here.\n
+  3-D rendering of the protein (from selected gene) is shown here.\n
   Location of the mutation is highlighted by a white blob.
   "
 
 allvar_help_text <- HTML(
   "
-  <p>In this tab, you can choose to explore across different genes and compare positions and various scores.
+  <p>In this tab, you can explore across different genes and compare positions and various scores.
   Use the control on the left to select the gene explore relationships</p>
      
   <p>The table below shows all the missense variants in the gene. You can filter the table by EpiPred class
-  and Reported source. Clicking on a row highlights the mutation in the plot above.</p>
+  and Reported source. Clicking on a row highlights the mutation in the above plot.</p>
   
-  <p> You can also download the table by clicking the download button below the table.</p>"
+  <p>You can also download the table by clicking the download button below the table.</p>"
 )
 
 distr_help_text <- 
@@ -190,7 +195,7 @@ SingleVarUI <- function(id) {
           "Your Sequence's EpiPred Score", HTML('&nbsp;'),
           tooltip(
             bs_icon("question-circle-fill", color = "grey"),
-            textOutput(NS(id,"colorbar_help_text")),
+            colorbar_help_text1,
             placement = "right"
           )
         ),
@@ -272,14 +277,6 @@ SingleVarUI <- function(id) {
 SingleVarServer <- function(id, mutations, gene, selected) {
   moduleServer(id, function(input, output, session) {
     colorbar_height <- 2/3
-    
-    output$colorbar_help_text <- renderText({
-      if (input$epi_dist == "proportion") {
-        colorbar_help_text1
-      } else {
-        colorbar_help_text2
-      }
-    })
     
     # update gene reactive variable based on input
     observeEvent(input$gene,{
@@ -372,7 +369,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
           "<br>",
           "<span>Selected Sequence ID: ", "<strong>", variant_id(), "</strong></span>", 
           "<span>Predicted Pathogenic Class: ", "<strong>", epipred_prediction()$class, "</strong></span>", 
-          "<span>Pathogenic Score: ", "<strong>", epipred_prediction()$score, "</strong></span>"
+          "<span>Pathogenic Score: ", "<strong>", round(epipred_prediction()$score,2), "</strong></span>"
         )
       )
     })
