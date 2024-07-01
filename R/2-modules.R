@@ -93,6 +93,8 @@ distr_help_text <-
   The distribution of the EpiPred score across all possible sequences in the gene is shown here.
   "
 
+# Home UI -----------------------------------------------------------------
+
 # Module for the Home Tab
 HomeUI <- function(id) {
   page_fixed(
@@ -107,6 +109,8 @@ HomeUI <- function(id) {
     )
   )
 }
+
+# Single Var --------------------------------------------------------------
 
 # Module for Single Missense Variant Prediction Tab
 SingleVarUI <- function(id) {
@@ -301,10 +305,14 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     
     # create colorbar
     epipred_colorbar <- reactive(
-      create_epipred_colorbar2(
-        bar_height = colorbar_height,
-        epi_dist_summary = NULL,
-        distribution_type = input$epi_dist
+      # create_epipred_colorbar2(
+      #   bar_height = colorbar_height,
+      #   epi_dist_summary = NULL,
+      #   distribution_type = input$epi_dist
+      # )
+      create_epipred_colorbar(
+        nbars = 10000,
+        bar_height = colorbar_height
       )
     )
     
@@ -380,7 +388,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         epipred_prediction = epipred_prediction(),
         epipred_colorbar = epipred_colorbar(),
         bar_height = colorbar_height,
-        classification_label_inside = TRUE
+        classification_label_type = 3
       )
     }, height = 230)
     
@@ -417,6 +425,8 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     }, res = 108)
   })
 }
+
+# Table Display -----------------------------------------------------------
 
 # Module for displaying Table for a given gene
 TableDisplayUI <- function(id) {
@@ -472,7 +482,7 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
     })
     
     
-    # Downloadable csv of selected dataset ----
+    # Downloadable csv of selected dataset
     output$downloadData <- downloadHandler(
       filename = function() {
         paste("Table_Out",Sys.Date(),".csv", sep = "")
@@ -483,6 +493,8 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
     )
   })
 }
+
+# All Vars ----------------------------------------------------------------
 
 # Module for exploring prediction result for all variants in a given gene
 AllVarUI <- function(id) {

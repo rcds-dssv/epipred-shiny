@@ -13,7 +13,7 @@ library(grid)
 # display epipred score on the colorbar
 display_epipred_score <- function(
     epipred_prediction, epipred_colorbar, bar_height = 1,
-    classification_label_inside = FALSE
+    classification_label_type = 1
   ) {
   
   # extract score
@@ -25,14 +25,8 @@ display_epipred_score <- function(
     x = c(0.125, 0.375, 0.625, 0.875),
     text = c("Likely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic")
   )
-  if (classification_label_inside) {
-    classification_df$y <- 0
-    label_vjust <- 0.5
-  } else {
-    classification_df$y <- -(bar_height / 2) - 0.05
-    label_vjust <- 1
-  }
   
+  # draw score indicator above the colorbar
   g <- epipred_colorbar +
     annotate(
       geom = "point", x = epi_score, y = bar_height/2 + 0.13,
@@ -43,39 +37,92 @@ display_epipred_score <- function(
       geom = "text", x = epi_score, y = bar_height/2 + 0.25,
       label = round(epi_score, 2), size = 8,
       vjust = 0
-    ) +
-    geom_text(
-      data = classification_df,
-      aes(x = x, y = y, label = text),
-      size = 6, vjust = label_vjust,
-      fontface = "bold"
     ) + 
     ylim(-1, 1)
+  
+  # add classification labels
+  # the predicted classes can be displayed in several ways
+  if (classification_label_type == 1) {
+    # classification labels are displayed inside the colorbar
+    
+    classification_df$y <- 0
+    label_vjust <- 0.5
+    
+    g <- g +
+      geom_text(
+        data = classification_df,
+        aes(x = x, y = y, label = text),
+        size = 6, vjust = label_vjust,
+        fontface = "bold"
+      )
+  } else if (classification_label_type == 2) {
+    # classification labels are displayed below the colorbar
+    
+    classification_df$y <- -(bar_height / 2) - 0.05
+    label_vjust <- 1
+    
+    g <- g +
+      geom_text(
+        data = classification_df,
+        aes(x = x, y = y, label = text),
+        size = 6, vjust = label_vjust,
+        fontface = "bold"
+      )
+  } else if (classification_label_type == 3) {
+    # convey direction of pathogenicity
+    
+    arrow_x_gap <- 0.03
+    arrow1_x <- 0.5 - arrow_x_gap; arrow2_x <- 0.5 + arrow_x_gap
+    
+    g <- g +
+      geom_segment(
+        x = arrow1_x, xend = arrow_x_gap, y = -0.5,
+        arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
+        size = 0.5
+      ) +
+      geom_segment(
+        x = arrow2_x, xend = 1 - arrow_x_gap, y = -0.5,
+        arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
+        size = 0.5
+      ) +
+      annotate(
+        geom = "text", x = arrow1_x / 2, y = -0.7,
+        label = "Likely Benign", size = 6, fontface = "bold"
+      ) +
+      annotate(
+        geom = "text", x = (arrow2_x + 1) / 2, y = -0.7,
+        label = "Likely Pathogenic", size = 6, fontface = "bold"
+      ) +
+      geom_segment(
+        x = 0.5, y = (bar_height / 2) + 0.05, yend = -(bar_height / 2) - 0.05,
+        linetype = "dashed", color = "grey50"
+      ) +
+      annotate(
+        geom = "text", x = c(0-0.03, 1 + 0.03), y = 0,
+        label = c("0","1"), fontface = "bold", size = 6
+      )
+  }
   
   return(g)
 }
 
-## Approach 1: Horizontal barplot
-## Bar cannot be filled with a gradient, so need to create n bars
-## stacked on top of each other and fill with gradient
+## Approach 1: Gradient with many segments
+# create a colorbar and draw many segments to give the illusion of a gradient
 create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_color = "#4E2A84",
-                             middle_color = "grey", outline_width = 1,
+                             middle_color = "grey", outline_width = 1, bar_height = 1,
                              void = TRUE) {
 
-  bardata <- create_bardata(nbars)
-  outline_data <- create_outline_data(1)
+  bardata <- create_bardata(nbars, bar_height)
+  outline_data <- create_outline_data(bar_height)
   
   g <- ggplot(bardata,aes(x=x,y=y)) +
-    geom_bar(
-      aes(fill = z, color = z),
+    geom_segment(
+      aes(color = z, yend = yend),
       stat="identity",
-      show.legend = FALSE,
-      width = 1
+      show.legend = FALSE
     ) +
-    # flip bar horizontally
-    coord_flip(xlim = c(-1,1), ylim = c(0,1)) +
     # gradient scheme
-    scale_fill_gradient2(
+    scale_color_gradient2(
       low = left_color, 
       mid = middle_color, 
       high = right_color, 
@@ -85,7 +132,7 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
     # add outline
     geom_path(
       data = outline_data,
-      aes(x = x, y = y),
+      aes(x = y, y = x),
       linewidth = outline_width,
       linejoin = "mitre"
     )
@@ -97,7 +144,7 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
   return(g)
 }
 
-# create a second type of colorbar where colors are based on the 
+## Approach 2: create a second type of colorbar where colors are based on the 
 # epipred prediction class - cleaner look
 create_epipred_colorbar2 <- function(
     bar_height = 1,
@@ -153,10 +200,11 @@ create_epipred_colorbar2 <- function(
 }
 
 # create data frame of n equally spaced bars
-create_bardata <- function(n) {
+create_bardata <- function(n, bar_height) {
   data.frame(
-    x = rep(0, n),
-    y = rep(1/n, n),
+    x = seq(0, 1, length.out = n),
+    y = -0.5 * bar_height,
+    yend = 0.5 * bar_height,
     z = seq(from = 0, to = 1, length.out = n)
   )
 }
