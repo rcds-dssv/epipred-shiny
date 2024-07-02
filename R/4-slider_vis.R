@@ -123,12 +123,13 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
     ) +
     # gradient scheme
     scale_color_gradient2(
-      low = left_color, 
-      mid = middle_color, 
-      high = right_color, 
+      low = left_color,
+      mid = middle_color,
+      high = right_color,
       midpoint = 0.5,
-      aesthetics = "color"
-    ) + 
+      aesthetics = "color",
+      transform = "sqrt"
+    ) +
     # add outline
     geom_path(
       data = outline_data,

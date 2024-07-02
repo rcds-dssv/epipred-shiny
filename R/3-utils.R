@@ -47,6 +47,7 @@ epipred_score_color_palette <- function(x, left_color = "#74B347", right_color =
   # specified by the left, right, and middle colors
   return(colorRampPalette(c(left_color, middle_color, right_color))(x))
 }
+
 epipred_score_color_ramp <- function(x, left_color = "#74B347", right_color = "#4E2A84", middle_color = "grey") {
   # take in a value between 0 and 1 and return a color based on a gradient 
   # specified by the left, right, and middle colors
