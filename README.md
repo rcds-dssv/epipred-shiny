@@ -14,7 +14,7 @@ The repository can be cloned via command
 git clone https://github.com/rcds-dssv/epipred-shiny.git
 ```
 
-Necessary packages needed for smoothly running the app are recorded via `renv` package. It is recommended to run the app in a project environment. The repository includes `epipred-shiny.Rproj` file. You can either manually open this project inside R Studio or open the .Rproj file in Windows explorer (or Mac equivalent) to open the project.
+Necessary packages needed for smoothly running the app are recorded via [`renv`](https://rstudio.github.io/renv/articles/renv.html) package. It is recommended to run the app in a project environment. The repository includes `epipred-shiny.Rproj` file. You can either manually open this project inside R Studio or open the .Rproj file in Windows explorer (or Mac equivalent) to open the project.
 
 If you don't have the `renv` package installed, inside R / R Studio, run
 
@@ -45,7 +45,13 @@ runApp()
 
 or by clicking on "Run App" button inside R studio with the `app.R` file open.
 
-## Code Organization
+## Development
+
+### Managing Environment
+
+The packages are managed via `renv` package. Some packages get updated over time and this needs to be reflected in projects like this. As you work on the app and some package depencies get updated, you can occasionaly run (in R) `renv::snapshot()`
+
+### Code Organization
 
 All R code for the Shiny App is saved in the `./R` directory of the project.
 
