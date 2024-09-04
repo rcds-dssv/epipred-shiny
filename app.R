@@ -3,7 +3,7 @@ library(bslib)
 library(shinyWidgets)
 
 source("R/1-setup.R")
-source("R/2-modules.R")
+source("R/2-2-modules.R")
 source("R/3-utils.R")
 source("R/4-slider_vis.R")
 source("R/5-singleVarPlot.R")
