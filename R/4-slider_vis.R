@@ -146,7 +146,7 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
 }
 
 ## Approach 2: create a second type of colorbar where colors are based on the 
-# epipred prediction class - cleaner look
+# epipred prediction class - minimalistic look
 create_epipred_colorbar2 <- function(
     bar_height = 1,
     epi_dist_summary = NULL, distribution_type = "proportion", 

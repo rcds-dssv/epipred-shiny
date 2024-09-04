@@ -27,6 +27,7 @@ scatterplot_vars <- c(
   "CADD Score" = "CADD_PHRED",
   "Amino Acid Position" = "AA_POS"
 )
+
 reported_sources <- c(
   "GnomAD", "Reported VUS",
   "Patient-specific (P/LP)", "simulation only"
