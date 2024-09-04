@@ -1,13 +1,24 @@
 # Utility functions
 
 clean_mutations <- function(mutations) {
+  duplicate_id <- mutations %>%
+    count(One_letter_Amino_Acid_change) %>%
+    filter(n > 1) %>%
+    pull(One_letter_Amino_Acid_change)
+  if (length(duplicate_id) > 0) {
+    warning("Multiple variants may share the same ID. Mutation with the highest score is selected.")
+  }
+  
   # clean up the mutations data frame
   mutations <- mutations %>%
     mutate(
-      Reported = ifelse(Reported == "simluation only", "simulation only", Reported),
-      EpiPred_Class = factor(
-        EpiPred_Class,
-        levels = c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic")
+      new_class = factor(
+        new_class,
+        levels = c("BLB", "PLP", "Simulation", "VUS")
+      ),
+      epipred_prediction = factor(
+        epipred_prediction,
+        levels = c("BLB", "ambiguous", "PLP")
       ),
       id = row_number() # id only used for internal row identification
     )
@@ -22,25 +33,15 @@ get_epipred_prediction <- function(var_id, mutations) {
     var_id <- var_id[1]
   }
   epi_score <- mutations %>%
-    filter(AA_Change == var_id)
+    filter(One_letter_Amino_Acid_change %in% var_id) %>%
+    arrange(desc(Prob_PLP)) %>%
+    slice(1)
   prediction <- list(
-    "score" = epi_score$EpiPred_Raw_Score,
-    "class" = epi_score$EpiPred_Class
+    "score" = epi_score$Prob_PLP,
+    "class" = epi_score$epipred_prediction
   )
   return(prediction)
 }
-
-# # display more significant digits in tibble
-# old <- options(pillar.sigfig = 7)
-# 
-# # view range of EpiPred_Raw_Score for each EpiPred_Class
-# ids <- mutations %>%
-#   count(AA_Change) %>%
-#   filter(n > 1) %>%
-#   pull(AA_Change)
-# mutations %>%
-#   filter(AA_Change %in% ids) %>%
-#   # View()
 
 epipred_score_color_palette <- function(x, left_color = "#74B347", right_color = "#4E2A84", middle_color = "grey") {
   # take in an integer and return a palette of colors based on a gradient

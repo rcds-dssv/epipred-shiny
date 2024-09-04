@@ -84,7 +84,7 @@ SingleVarUI <- function(id) {
       card(
         card_body(
           p(strong("Input Amino Acid Sequence"), style="text-align: center;"),
-          textInput(NS(id,"val"), label = NULL, value = "p.A2P"),
+          textInput(NS(id,"val"), label = NULL, value = "A2P"),
           actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
           class = "align-items-center",
           align = "center"
@@ -237,7 +237,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     })
     variant_id <- reactiveVal()
     observe({
-      if (variant_id_tmp() %in% mutations()$AA_Change) {
+      if (variant_id_tmp() %in% mutations()$One_letter_Amino_Acid_change ) {
         variant_id(variant_id_tmp())
       }
     })
@@ -268,7 +268,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     # when variant is updated, highlight the affected residue
     observeEvent(input$update, {
       aa_pos <- mutations() %>%
-        filter(AA_Change %in% variant_id()) %>%
+        filter(One_letter_Amino_Acid_change %in% variant_id()) %>%
         pull(AA_POS) %>% 
         min() %>%
         as.character()
@@ -373,10 +373,10 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
     selectedData <- reactive({
       data <- data.frame(mutations())
       if (input$class != "All") {
-        data <- data[data$EpiPred_Class == input$class,]
+        data <- data[data$epipred_prediction == input$class,]
       }
       if (input$report != "All") {
-        data <- data[data$Reported == input$report,]
+        data <- data[data$new_class == input$report,]
       }
       data
     })
@@ -438,7 +438,7 @@ AllVarUI <- function(id) {
         selectInput(NS(id,"var1"), strong("x Variable"), choices = scatterplot_vars, selected = scatterplot_vars[1]),
         selectInput(NS(id,"var2"), strong("y Variable"), choices = scatterplot_vars, selected = scatterplot_vars[2]),
         selectInput(NS(id,"margin_type"), strong("Margin Plot Type"), choices = c("density", "histogram", "boxplot", "violin", "densigram")),
-        radioButtons(NS(id,"color_group"), strong("Color By"), choices = c("Reported" = "Reported", "EpiPred Class" = "EpiPred_Class")),
+        radioButtons(NS(id,"color_group"), strong("Color By"), choices = c("Variant Class" = "new_class", "EpiPred Class" = "epipred_prediction")),
         checkboxGroupInput(NS(id,"report"), strong("Reported"), choices = report_source, selected = report_source),
         bg = "#f5f5f5"
       ),

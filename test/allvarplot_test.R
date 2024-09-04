@@ -1,6 +1,6 @@
 library(ggExtra)
 
-mutations <- read.csv(file.path("data","STXBP1_DTv2.csv"))
+mutations <- read.csv(file.path("data","STXBP1.csv"))
 mutations <- clean_mutations(mutations)
 
 

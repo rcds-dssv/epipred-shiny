@@ -7,25 +7,42 @@
 # to see the visualization result, try running plot_epi_raw("p.A2P", mutations)
 
 epi_class_background_panel <- function(stack_vertical = TRUE) {
+  n_class_ <- length(epipred_class_)
+  
   # Background panel colors to distinguish epipred score classes
-  background_panel_colors <- epipred_score_color_ramp(c(0, 0.3, 0.7, 1))
+  background_panel_colors <- epipred_score_color_ramp(c(0, 0.5, 1))
+  position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
   
   if (stack_vertical) {
-    background_geom <- list(
-      annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0, ymax = 0.25, fill = background_panel_colors[1], alpha = 0.5),
-      annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.25, ymax = .5, fill = background_panel_colors[2], alpha = 0.5),
-      annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.5, ymax = 0.75, fill = background_panel_colors[3], alpha = 0.5),
-      annotate("rect", xmin = -Inf, xmax = Inf, ymin = 0.75, ymax = 1, fill = background_panel_colors[4], alpha = 0.5)
-    )
+    background_geom <- list()
+    for (i in 1:(length(position_seq) - 1)) {
+      background_geom <- append(
+        background_geom, 
+        list(
+          annotate(
+            "rect", xmin = -Inf, xmax = Inf, 
+            ymin = position_seq[i], ymax = position_seq[i+1],
+            fill = background_panel_colors[i], alpha = 0.5
+          )
+        )
+      )
+    }
+    
   } else {
-    background_geom <- list(
-      annotate("rect", ymin = -Inf, ymax = Inf, xmin = 0, xmax = 0.25, fill = background_panel_colors[1], alpha = 0.5),
-      annotate("rect", ymin = -Inf, ymax = Inf, xmin = 0.25, xmax = .5, fill = background_panel_colors[2], alpha = 0.5),
-      annotate("rect", ymin = -Inf, ymax = Inf, xmin = 0.5, xmax = 0.75, fill = background_panel_colors[3], alpha = 0.5),
-      annotate("rect", ymin = -Inf, ymax = Inf, xmin = 0.75, xmax = 1, fill = background_panel_colors[4], alpha = 0.5)
-    )
+    background_geom <- list()
+    for (i in 1:(length(position_seq) - 1)) {
+      background_geom <- append(
+        background_geom, 
+        list(
+          annotate(
+            "rect", ymin = -Inf, ymax = Inf, 
+            xmin = position_seq[i], xmax = position_seq[i+1],
+            fill = background_panel_colors[i], alpha = 0.5
+          )
+        )
+      )
+    }
   }
-  
   
   return(background_geom)
 }
@@ -36,15 +53,15 @@ plot_epi_raw_v_aa_pos <- function(
   ) {
   # plot the raw EpiPred score vs amino acid position, given variant ID
   mutations_selected <- mutations %>%
-    filter(AA_Change == var_id)
+    filter(One_letter_Amino_Acid_change == var_id)
   
   ggplot(mutations) + 
     # background layer to color based on epipred score
     epi_class_background_panel() +
     # add single variant ad the score
-    geom_point(aes(x = AA_POS, y = EpiPred_Raw_Score), color = "#333333") +
+    geom_point(aes(x = AA_POS, y = Prob_PLP), color = "#333333") +
     geom_point(
-      aes(x = AA_POS, y = EpiPred_Raw_Score),
+      aes(x = AA_POS, y = Prob_PLP),
       data = mutations_selected,
       color = "black", fill = "red", shape = 23, size = 3.5
     ) + 
@@ -79,17 +96,21 @@ plot_epi_raw_boxplot <- function(
   # a function to plot a boxplot of epi pred raw score,
   # and plot an individual's variant score on the boxplot
   
+  n_class_ <- length(epipred_class_)
+  position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
+  break_pos <- (position_seq[1:(length(position_seq)-1)] + position_seq[2:length(position_seq)]) / 2
+  
   # plot the raw EpiPred score vs amino acid position, given variant ID
   mutations_selected <- mutations %>%
-    filter(AA_Change == var_id)
+    filter(One_letter_Amino_Acid_change == var_id)
   
   ggplot(mutations) + 
     # background layer to color based on epipred score
     epi_class_background_panel() +
     # boxplot and individual variant score
-    geom_boxplot(aes(x = 1, y = EpiPred_Raw_Score)) +
+    geom_boxplot(aes(x = 1, y = Prob_PLP)) +
     geom_point(
-      aes(x = 1, y = EpiPred_Raw_Score),
+      aes(x = 1, y = Prob_PLP),
       data = mutations_selected,
       color = "black", fill = "red", shape = 23, size = 3.5
     ) + 
@@ -97,11 +118,11 @@ plot_epi_raw_boxplot <- function(
       limits = c(0,1),
       sec.axis = sec_axis(
         transform = ~ .,
-        breaks = c(0.125, 0.375, 0.625, 0.875),
-        labels = c("Lkely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic"))
+        breaks = break_pos,
+        labels = epipred_class_)
     ) + 
     geom_hline(
-      yintercept = mutations_selected$EpiPred_Raw_Score,
+      yintercept = mutations_selected$Prob_PLP,
       color = "red",
       linetype = "dashed",
       linewidth = 0.7
@@ -122,16 +143,16 @@ plot_epi_raw_violinplot <- function(var_id, mutations) {
   
   # plot the raw EpiPred score vs amino acid position, given variant ID
   mutations_selected <- mutations %>%
-    filter(AA_Change == var_id)
+    filter(One_letter_Amino_Acid_change == var_id)
   
   ggplot(mutations) + 
     # background layer to color based on epipred score
     epi_class_background_panel() +
     # boxplot and individual variant score
-    geom_violin(aes(x = 1, y = EpiPred_Raw_Score), alpha = 0.3, width = 0.5) +
-    geom_boxplot(aes(x = 1, y = EpiPred_Raw_Score), width = 0.05, fill = "white", color = "black") +
+    geom_violin(aes(x = 1, y = Prob_PLP), alpha = 0.3, width = 0.5) +
+    geom_boxplot(aes(x = 1, y = Prob_PLP), width = 0.05, fill = "white", color = "black") +
     geom_hline(
-      yintercept = mutations_selected$EpiPred_Raw_Score,
+      yintercept = mutations_selected$Prob_PLP,
       color = "red",
       linetype = "dashed",
       linewidth = 0.7
@@ -169,25 +190,28 @@ plot_epi_raw <- function(var_id, mutations) {
 plot_epi_distr_barplot <- function(
   mutations, epi_dist_summary
 ) {
+  n_class_ <- length(epipred_class_)
+  position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
+  break_pos <- (position_seq[1:(length(position_seq)-1)] + position_seq[2:length(position_seq)]) / 2
   
   class_prop_df <- data.frame(
     class = factor(
-      c("Likely Benign", "Possibly Benign", "Possibly Pathogenic", "Likely Pathogenic"),
-      levels = c("Likely Benign", "Possibly Benign", "Possibly Pathogenic", "Likely Pathogenic")
+      epipred_class_,
+      levels = epipred_class_
     ),
-    x = c(0.125, 0.375, 0.625, 0.875),
+    x = break_pos,
     proportions = epi_dist_summary$class_proportions
   )
   
-  colormap <- epipred_score_color_ramp(c(0, 0.3, 0.7, 1))
-  names(colormap) <- c("Likely Benign", "Possibly Benign", "Possibly Pathogenic", "Likely Pathogenic")
+  colormap <- epipred_score_color_ramp(c(0, 0.5, 1))
+  names(colormap) <- epipred_class_
   
   ggplot(class_prop_df) + 
     geom_col(aes(x = x, y = proportions, fill = class), show.legend = FALSE) +
     scale_fill_manual(values = colormap) +
     scale_x_continuous(
-      breaks = c(0.125, 0.375, 0.625, 0.875),
-      labels = c("Likely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic")
+      breaks = break_pos,
+      labels = epipred_class_
     ) +
     scale_y_continuous(labels = scales::percent) +
     xlab("Predicted Class") +
@@ -206,7 +230,7 @@ plot_epi_distr_barplot <- function(
 plot_epi_distr_boxplot <- function(mutations) {
   ggplot(mutations) +
     epi_class_background_panel(stack_vertical = FALSE) +
-    geom_boxplot(aes(x = EpiPred_Raw_Score), alpha = 0.8, size = 1, width = 0.8) +
+    geom_boxplot(aes(x = Prob_PLP), alpha = 0.8, size = 1, width = 0.8) +
     coord_cartesian(xlim = c(0,1)) +
     ylim(-0.7,0.7) +
     xlab("EpiPred Raw Score") +
@@ -228,7 +252,7 @@ plot_epi_distr_histogram <- function(mutations) {
   ggplot(mutations) +
     epi_class_background_panel(stack_vertical = FALSE) +
     geom_histogram(
-      aes(x = EpiPred_Raw_Score), binwidth = 0.02,
+      aes(x = Prob_PLP), binwidth = 0.02,
       fill = "grey30", alpha = 0.8, boundary = 0, closed = "left"
     ) +
     ylab("Count") +

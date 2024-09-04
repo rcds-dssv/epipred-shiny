@@ -73,30 +73,30 @@ score_v_position <- function(mutations, score) {
 marginal_plot <- function(
     mutations, var1, var2, 
     margin_type = "density", 
-    reported = c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only"),
-    color_group = "Reported",
+    reported = c("VUS", "Simulation", "BLB", "PLP"),
+    color_group = "new_class",
     highlight_id = NULL
 ) {
   # create color mapping for report source
-  reported_sources <- c("GnomAD", "Reported VUS", "Patient-specific (P/LP)", "simulation only")
+  reported_sources <- c("VUS", "Simulation", "BLB", "PLP")
   reported_colormap <- brewer.pal(length(reported_sources), "Set2")
   names(reported_colormap) <- reported_sources
   
   # create color mapping for Epipred Class
-  epipred_classes <- c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic")
-  epipred_class_colormap <- epipred_score_color_ramp(c(0, 0.3, 0.7, 1))
+  epipred_classes <- c("BLB", "ambiguous", "PLP")
+  epipred_class_colormap <- epipred_score_color_ramp(c(0, 0.5, 1))
   names(epipred_class_colormap) <- epipred_classes
   
-  if (color_group == "Reported") {
+  if (color_group == "new_class") {
     colormap <- reported_colormap
-  } else if (color_group == "EpiPred_Class") {
+  } else if (color_group == "epipred_prediction") {
     colormap <- epipred_class_colormap
   } else {
     stop("Error in marginal_plot: invalid color_group")
   }
   
   # subset data to included select reported source
-  subset_data <- mutations %>% filter(Reported %in% reported)
+  subset_data <- mutations %>% filter(new_class %in% reported)
   
   # create main scatter plot
   g <- ggplot(subset_data) +

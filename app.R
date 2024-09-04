@@ -16,6 +16,8 @@ app_theme <- bs_theme(
   preset = "yeti"
 )
 
+debugging <- FALSE
+
 # ui 
 ui <- page_fluid(
   theme = app_theme,
@@ -37,16 +39,20 @@ ui <- page_fluid(
 # server
 server <- function(input, output) {
   
-  # # for debugging
-  # observeEvent(input$test, {
-  #   print("Testing...")
-  #   print(paste(dt_selected_index()))
-  # })
+  # for debugging
+  observeEvent(input$test, {
+    req(debugging)
+    print("Selecting gene index...")
+    print(paste(dt_selected_index()))
+  })
 
   gene <- reactiveVal("STXBP1")
   mutations <- reactive({
-    print(paste("Current gene:", gene()))
-    mutations_ <- read.csv(file.path("data",paste0("STXBP1", "_DTv2.csv")))
+    if (debugging) {
+      # for debugging
+      print(paste("Current gene:", gene())) 
+    }
+    mutations_ <- read.csv(genes_file_map[[gene()]])
     # pretend we are using the gene input -- will need to uncomment this when more genes are added
     # mutations_ <- read.csv(file.path("data",paste0(gene(), "_DTv2.csv")))
     

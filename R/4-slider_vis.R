@@ -223,14 +223,14 @@ create_outline_data <- function(bar_width) {
 # for chosen dataset
 get_epi_distribution_summary <- function(mutations) {
   # get proportion of variants that fall into the predicted class
-  class_proportions <- mutations$EpiPred_Class %>%
-    factor(levels = c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic")) %>%
+  class_proportions <- mutations$epipred_prediction %>%
+    factor(levels = epipred_class_) %>%
     table() %>%
     prop.table() %>%
     c()
   
   # get kernel density estimate of the epipred score
-  epipred_kd <- density(mutations$EpiPred_Raw_Score, from = 0, to = 1, na.rm = TRUE, adjust=0.5)
+  epipred_kd <- density(mutations$Prob_PLP, from = 0, to = 1, na.rm = TRUE, adjust=0.5)
   
   return(list(class_proportions = class_proportions, density = epipred_kd))
 }
