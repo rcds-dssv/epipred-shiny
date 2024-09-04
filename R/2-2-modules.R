@@ -23,6 +23,7 @@ HomeUI <- function(id) {
 # Module for Single Missense Variant Prediction Tab
 SingleVarUI <- function(id) {
   page_fixed(
+    tags$head(tags$style(HTML(sprintf("#%s-val {text-align: center;}", id)))),
     titlePanel(h1("EpiPred Result Explorer", align = "center") ),
     
     br(),  
@@ -58,16 +59,19 @@ SingleVarUI <- function(id) {
       
       "
     )),
+    
+    # Gene selection input
     layout_columns(
       card(
         card_body(
-          p("Gene Select", style="text-align: center;"),
-          selectInput(
-            NS(id,"gene"),
-            label = NULL,
-            choices = genes_avail,
-            selected = NULL
-          ),
+          p(strong("Gene Select")),
+            selectInput(
+              NS(id,"gene"),
+              label = NULL,
+              choices = genes_avail,
+              selected = NULL
+            ),
+          class = "align-items-center",
           style = "overflow: visible !important;"
         ),
         style = "overflow: visible !important;"
@@ -79,9 +83,10 @@ SingleVarUI <- function(id) {
     layout_columns(
       card(
         card_body(
-          p("Input Amino Acid Sequence", style="text-align: center;"),
+          p(strong("Input Amino Acid Sequence"), style="text-align: center;"),
           textInput(NS(id,"val"), label = NULL, value = "p.A2P"),
           actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
+          class = "align-items-center",
           align = "center"
         ),
       ),
