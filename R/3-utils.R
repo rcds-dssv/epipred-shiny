@@ -32,10 +32,28 @@ get_epipred_prediction <- function(var_id, mutations, unique_id = NULL) {
     warning("Only the first variant ID will be used to query.")
     var_id <- var_id[1]
   }
-  epi_score <- mutations %>%
-    filter(One_letter_Amino_Acid_change %in% var_id) %>%
-    arrange(desc(Prob_PLP)) %>%
-    slice(1)
+  
+  if (is.null(unique_id)) {
+    epi_score <- mutations %>%
+      filter(One_letter_Amino_Acid_change %in% var_id) %>%
+      arrange(desc(Prob_PLP)) %>%
+      slice(1)
+  } else {
+    epi_score <- mutations %>%
+      filter(
+        One_letter_Amino_Acid_change == var_id,
+        hg38_uniq_ID == unique_id
+      )
+  }
+  
+  if (nrow(epi_score) == 0) {
+    stop(sprintf("
+                 Error in get_epipred_prediction(): 
+                 Variant ID not found in the data set. 
+                 var_id: %s, unique_id: %s
+                 ", var_id, unique_id))
+  }
+  
   prediction <- list(
     "score" = epi_score$Prob_PLP,
     "class" = epi_score$epipred_prediction

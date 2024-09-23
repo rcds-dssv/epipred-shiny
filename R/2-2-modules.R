@@ -60,37 +60,52 @@ SingleVarUI <- function(id) {
       "
     )),
     
-    # Gene selection input
+    # Sequence selection input
     layout_columns(
+      
+      # select input gene
       card(
         card_body(
           p(strong("Gene Select")),
-            selectInput(
-              NS(id,"gene"),
-              label = NULL,
-              choices = genes_avail,
-              selected = NULL
-            ),
+          selectInput(
+            NS(id,"gene"),
+            label = NULL,
+            choices = genes_avail,
+            selected = NULL
+          ),
           class = "align-items-center",
           style = "overflow: visible !important;"
         ),
         style = "overflow: visible !important;"
       ),
-      col_widths = c(-4,4,-4)
-    ),
-    
-    # Input for Amino Acid Sequence and Display prediction result
-    layout_columns(
+      
+      # Text Input Amino Acid Sequence
       card(
         card_body(
           p(strong("Input Amino Acid Sequence"), style="text-align: center;"),
           textInput(NS(id,"val"), label = NULL, value = "A2P"),
-          actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
           class = "align-items-center",
           align = "center"
-        ),
+        )
       ),
-      col_widths = c(-4, 4, -4)
+      col_widths = c(-1, 5,5, -1)
+    ),
+    
+    # Submit button
+    layout_columns(
+      actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
+      col_widths = c(-5,2,-5)
+    ),
+    
+    
+    conditionalPanel(
+      condition = "output.multiple_snps == true",
+      ns = NS(id),
+      layout_columns(
+        span("* The sequence can arise from multiple mutations.
+             Please select your mutation below.", style = "color:red;font-size:12px"),
+        col_widths = c(-2, 8, -2)
+      )
     ),
     
     br(),
@@ -103,15 +118,17 @@ SingleVarUI <- function(id) {
       style='border-bottom: 1px solid #c6c7c7'
     ),
     
-    # display sequence information
+    # sequence info and colorbar
     layout_column_wrap(
       width = NULL,
       style = css(grid_template_columns = "1fr 2fr"),
+      
+      # sequence information in text
       card(
         card_header(
           class = "d-flex justify-content-between",
           div(
-            "Sequence Information", HTML('&nbsp;'),
+            "Sequence Info", HTML('&nbsp;'),
             tooltip(
               bs_icon("question-circle-fill", color = "grey"),
               sequence_info_help_text,
@@ -119,19 +136,15 @@ SingleVarUI <- function(id) {
             )
           ),
         ),
-        # conditionalPanel(
-        #   condition = "output.multiple_snps == true",
-        #   ns = NS(id)
-        # ),
-        selectInput(
+        "Unique Mutation ID:",
+        selectizeInput(
           NS(id, "snp_id"),
-          label = "Unique Mutation ID:",
-          choices = c("A","B","C"),
-          width = "100%"
+          label = NULL,
+          width = "100%",
+          choices = NULL
         ),
         uiOutput(NS(id, "epipred_output_text")),
         style = "overflow: visible !important;"
-        # class = "align-items-center"
       ),
       
       # EpiPred colorbar plot
@@ -245,11 +258,6 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     
     # create colorbar
     epipred_colorbar <- reactive(
-      # create_epipred_colorbar2(
-      #   bar_height = colorbar_height,
-      #   epi_dist_summary = NULL,
-      #   distribution_type = input$epi_dist
-      # )
       create_epipred_colorbar(
         nbars = 10000,
         bar_height = colorbar_height
@@ -260,7 +268,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     # only update if the variant id exists
     variant_id_tmp <- reactive({
       input$update
-      isolate(input$val)
+      isolate(toupper(input$val))
     })
     variant_id <- reactiveVal()
     observe({
@@ -281,9 +289,21 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     })
     outputOptions(output, "multiple_snps", suspendWhenHidden = FALSE)
     
+    observe({
+      unique_id_choices <- mutations() %>%
+        filter(One_letter_Amino_Acid_change == variant_id()) %>%
+        pull(hg38_uniq_ID)
+      
+      updateSelectizeInput(
+        session = session,
+        inputId = "snp_id",
+        choices = unique_id_choices
+      )
+    })
+    
     # retrieve prediction result for chosen variant
     epipred_prediction <- reactive({
-      get_epipred_prediction(variant_id(), mutations())
+      get_epipred_prediction(isolate(variant_id()), mutations(), input$snp_id)
     })
     
     # NGLViewer Output
@@ -390,7 +410,7 @@ TableDisplayUI <- function(id) {
     layout_columns(
       selectInput(NS(id,"class"),
                   "EpiPred Class:",
-                  c("All",epipred_class)
+                  c("All",epipred_class_)
       ),
       selectInput(NS(id,"report"),
                   "Reported:",
