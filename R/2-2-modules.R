@@ -40,7 +40,7 @@ SingleVarUI <- function(id) {
     
     # Gene input header
     layout_columns(
-      h2("Gene and Sequence Input"),
+      h2("Gene and Sequence Input", align = "center"),
       col_widths = 12,
       style = 'border-bottom: 1px solid #c6c7c7'
     ),
@@ -99,27 +99,54 @@ SingleVarUI <- function(id) {
     
     # result viewer header
     layout_columns(
-      h2("Result Viewer"),
+      h2("Result Viewer", align = "center"),
       style='border-bottom: 1px solid #c6c7c7'
     ),
     
-    # EpiPred colorbar plot
-    card(
-      # header
-      card_header(
-        class = "d-flex justify-content-between",
-        div(
-          "Your Sequence's EpiPred Score", HTML('&nbsp;'),
-          tooltip(
-            bs_icon("question-circle-fill", color = "grey"),
-            colorbar_help_text1,
-            placement = "right"
-          )
+    # display sequence information
+    layout_column_wrap(
+      width = NULL,
+      style = css(grid_template_columns = "1fr 2fr"),
+      card(
+        card_header(
+          class = "d-flex justify-content-between",
+          div(
+            "Sequence Information", HTML('&nbsp;'),
+            tooltip(
+              bs_icon("question-circle-fill", color = "grey"),
+              sequence_info_help_text,
+              placement = "right"
+            )
+          ),
         ),
-      ),
-      # body
-      card_body(
+        # conditionalPanel(
+        #   condition = "output.multiple_snps == true",
+        #   ns = NS(id)
+        # ),
+        selectInput(
+          NS(id, "snp_id"),
+          label = "Unique Mutation ID:",
+          choices = c("A","B","C"),
+          width = "100%"
+        ),
         uiOutput(NS(id, "epipred_output_text")),
+        style = "overflow: visible !important;"
+        # class = "align-items-center"
+      ),
+      
+      # EpiPred colorbar plot
+      card(
+        card_header(
+          class = "d-flex justify-content-between",
+          div(
+            "Your Sequence's EpiPred Score", HTML('&nbsp;'),
+            tooltip(
+              bs_icon("question-circle-fill", color = "grey"),
+              colorbar_help_text1,
+              placement = "right"
+            )
+          ),
+        ),
         plotOutput(NS(id,"epipred_bar"), height = 220), width = "10%",
         style = "text-align:center;"
       )
@@ -237,10 +264,22 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     })
     variant_id <- reactiveVal()
     observe({
-      if (variant_id_tmp() %in% mutations()$One_letter_Amino_Acid_change ) {
+      if (variant_id_tmp() %in% mutations()$One_letter_Amino_Acid_change) {
         variant_id(variant_id_tmp())
       }
     })
+    
+    # AA sequence can arise from different SNPs
+    # If this is the case, have the user specify the SNP
+    output$multiple_snps <- reactive({
+      snp_n <- sum(mutations()$One_letter_Amino_Acid_change == variant_id())
+      if (snp_n > 1) {
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+    })
+    outputOptions(output, "multiple_snps", suspendWhenHidden = FALSE)
     
     # retrieve prediction result for chosen variant
     epipred_prediction <- reactive({
@@ -287,9 +326,8 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     output$epipred_output_text <- renderUI({
       HTML(
         paste0(
-          "<br>",
-          "<span>Selected Sequence ID: ", "<strong>", variant_id(), "</strong></span>", 
-          "<span>Predicted Pathogenic Class: ", "<strong>", epipred_prediction()$class, "</strong></span>", 
+          "<span>Sequence ID: ", "<strong>", variant_id(), "</strong></span>", 
+          "<span>Predicted Class: ", "<strong>", epipred_prediction()$class, "</strong></span>", 
           "<span>Pathogenic Score: ", "<strong>", round(epipred_prediction()$score,2), "</strong></span>"
         )
       )

@@ -69,6 +69,11 @@ overall_help_text <- HTML(
   "
 )
 
+sequence_info_help_text <- 
+  "
+  Your sequence's information is displayed here.
+  "
+
 # Help text for the color bar
 colorbar_help_text1 <- 
   "

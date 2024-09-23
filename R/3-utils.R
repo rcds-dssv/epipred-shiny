@@ -27,7 +27,7 @@ clean_mutations <- function(mutations) {
 }
 
 # Function for retrieving epipred score
-get_epipred_prediction <- function(var_id, mutations) {
+get_epipred_prediction <- function(var_id, mutations, unique_id = NULL) {
   if (length(var_id) > 1) {
     warning("Only the first variant ID will be used to query.")
     var_id <- var_id[1]
