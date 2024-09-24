@@ -97,7 +97,6 @@ SingleVarUI <- function(id) {
       col_widths = c(-5,2,-5)
     ),
     
-    
     conditionalPanel(
       condition = "output.multiple_snps == true",
       ns = NS(id),
@@ -382,15 +381,19 @@ SingleVarServer <- function(id, mutations, gene, selected) {
       if (input$epi_dist == "barplot") {
         plot_epi_distr_barplot(
           mutations = mutations(),
-          epi_dist_summary = epi_dist_summary()
+          epi_dist_summary = epi_dist_summary(),
+          all_classes = epipred_class_,
+          predicted_class = epipred_prediction()$class
         )
       } else if (input$epi_dist == "boxplot") {
         plot_epi_distr_boxplot(
-          mutations = mutations()
+          mutations = mutations(),
+          predicted_score = epipred_prediction()$score
         )
       } else if (input$epi_dist == "histogram") {
         plot_epi_distr_histogram(
-          mutations = mutations()
+          mutations = mutations(),
+          predicted_score = epipred_prediction()$score
         )
       }
     }, res = 108)

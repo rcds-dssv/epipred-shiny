@@ -188,30 +188,55 @@ plot_epi_raw <- function(var_id, mutations) {
 # which are available as TODO
 
 plot_epi_distr_barplot <- function(
-  mutations, epi_dist_summary
+    mutations, epi_dist_summary, all_classes, predicted_class = NULL,
+    alpha.lower = 0.7
 ) {
-  n_class_ <- length(epipred_class_)
+  n_class_ <- length(all_classes)
   position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
   break_pos <- (position_seq[1:(length(position_seq)-1)] + position_seq[2:length(position_seq)]) / 2
   
   class_prop_df <- data.frame(
     class = factor(
-      epipred_class_,
-      levels = epipred_class_
+      all_classes,
+      levels = all_classes
     ),
     x = break_pos,
     proportions = epi_dist_summary$class_proportions
   )
   
-  colormap <- epipred_score_color_ramp(c(0, 0.5, 1))
-  names(colormap) <- epipred_class_
+  # control color aesthetic to highlight selected class
+  if (!is.null(predicted_class)) {
+    class_prop_df$highlight <- class_prop_df$class == predicted_class
+    colormap <- c("#000000", "#00000000")
+    names(colormap) <- c(TRUE, FALSE)
+  } else {
+    class_prop_df$highlight <- TRUE
+    colormap <- c("TRUE" = "#00000000")
+  }
+  
+  # control alpha aesthetic to highlight selected class
+  if (!is.null(predicted_class)) {
+    alphamap <- c(1, alpha.lower)
+    names(alphamap) <- c(TRUE, FALSE)
+  } else {
+    alphamap <- c("TRUE" = 1)
+  }
+  
+  # define filling scheme for bars
+  fillmap <- epipred_score_color_ramp(c(0, 0.5, 1))
+  names(fillmap) <- all_classes
   
   ggplot(class_prop_df) + 
-    geom_col(aes(x = x, y = proportions, fill = class), show.legend = FALSE) +
-    scale_fill_manual(values = colormap) +
+    geom_col(
+      aes(x = x, y = proportions, fill = class, color = highlight, alpha = highlight),
+      show.legend = FALSE, linejoin = "mitre", size = 1.5
+    ) +
+    scale_fill_manual(values = fillmap) +
+    scale_color_manual(values = colormap) +
+    scale_alpha_manual(values = alphamap) +
     scale_x_continuous(
       breaks = break_pos,
-      labels = epipred_class_
+      labels = all_classes
     ) +
     scale_y_continuous(labels = scales::percent) +
     xlab("Predicted Class") +
@@ -227,8 +252,9 @@ plot_epi_distr_barplot <- function(
   
 }
 
-plot_epi_distr_boxplot <- function(mutations) {
-  ggplot(mutations) +
+plot_epi_distr_boxplot <- function(mutations, predicted_score = NULL) {
+  
+  g <- ggplot(mutations) +
     epi_class_background_panel(stack_vertical = FALSE) +
     geom_boxplot(aes(x = Prob_PLP), alpha = 0.8, size = 1, width = 0.8) +
     coord_cartesian(xlim = c(0,1)) +
@@ -246,10 +272,20 @@ plot_epi_distr_boxplot <- function(mutations) {
       axis.title = element_text(size = 15),
       axis.title.x = element_text(vjust = -0.5)
     )
+  
+  if (!is.null(predicted_score)) {
+    g <- g + 
+      geom_vline(xintercept = predicted_score, linetype = "dashed", linewidth = 1, color = "darkred") +
+      ggtitle(label = "* Dashed line indicates your score") +
+      theme(plot.title = element_text(size=11))
+  }
+  
+  return(g)
 }
 
-plot_epi_distr_histogram <- function(mutations) {
-  ggplot(mutations) +
+plot_epi_distr_histogram <- function(mutations, predicted_score = NULL) {
+  
+  g <- ggplot(mutations) +
     epi_class_background_panel(stack_vertical = FALSE) +
     geom_histogram(
       aes(x = Prob_PLP), binwidth = 0.02,
@@ -262,4 +298,14 @@ plot_epi_distr_histogram <- function(mutations) {
       axis.title = element_text(size = 15),
       axis.title.x = element_text(vjust = -0.5)
     )
+  
+  if (!is.null(predicted_score)) {
+    g <- g + 
+      geom_vline(xintercept = predicted_score, linetype = "dashed", linewidth = 1, color = "darkred") +
+      ggtitle(label = "* Dashed line indicates your score") +
+      theme(plot.title = element_text(size=11))
+  }
+  
+  return(g)
 }
+
