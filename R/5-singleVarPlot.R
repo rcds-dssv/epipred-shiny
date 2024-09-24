@@ -6,15 +6,15 @@
 # to the user. 
 # to see the visualization result, try running plot_epi_raw("p.A2P", mutations)
 
-epi_class_background_panel <- function(stack_vertical = TRUE) {
-  n_class_ <- length(epipred_class_)
+epi_class_background_panel <- function(n, seq_from = -0.05, seq_to = 1.05, stack_vertical = TRUE) {
   
   # Background panel colors to distinguish epipred score classes
-  background_panel_colors <- epipred_score_color_ramp(c(0, 0.5, 1))
-  position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
+  position_seq <- seq(from = seq_from, to = seq_to, length.out = n + 1)
+  background_panel_colors <- epipred_score_color_ramp(seq(from = 0, to = 1, length.out = n + 1))
   
   if (stack_vertical) {
     background_geom <- list()
+    
     for (i in 1:(length(position_seq) - 1)) {
       background_geom <- append(
         background_geom, 
@@ -57,7 +57,7 @@ plot_epi_raw_v_aa_pos <- function(
   
   ggplot(mutations) + 
     # background layer to color based on epipred score
-    epi_class_background_panel() +
+    epi_class_background_panel(3) +
     # add single variant ad the score
     geom_point(aes(x = AA_POS, y = Prob_PLP), color = "#333333") +
     geom_point(
@@ -106,7 +106,7 @@ plot_epi_raw_boxplot <- function(
   
   ggplot(mutations) + 
     # background layer to color based on epipred score
-    epi_class_background_panel() +
+    epi_class_background_panel(n_class) +
     # boxplot and individual variant score
     geom_boxplot(aes(x = 1, y = Prob_PLP)) +
     geom_point(
@@ -147,7 +147,7 @@ plot_epi_raw_violinplot <- function(var_id, mutations) {
   
   ggplot(mutations) + 
     # background layer to color based on epipred score
-    epi_class_background_panel() +
+    epi_class_background_panel(3) +
     # boxplot and individual variant score
     geom_violin(aes(x = 1, y = Prob_PLP), alpha = 0.3, width = 0.5) +
     geom_boxplot(aes(x = 1, y = Prob_PLP), width = 0.05, fill = "white", color = "black") +
@@ -252,10 +252,16 @@ plot_epi_distr_barplot <- function(
   
 }
 
-plot_epi_distr_boxplot <- function(mutations, predicted_score = NULL) {
+plot_epi_distr_boxplot <- function(
+  mutations, predicted_score = NULL, n_panels = 3,
+  panel_seq_from = 0, panel_seq_to = 1
+) {
   
   g <- ggplot(mutations) +
-    epi_class_background_panel(stack_vertical = FALSE) +
+    epi_class_background_panel(
+      n_panels, seq_from = panel_seq_from, seq_to = panel_seq_to,
+      stack_vertical = FALSE
+    ) +
     geom_boxplot(aes(x = Prob_PLP), alpha = 0.8, size = 1, width = 0.8) +
     coord_cartesian(xlim = c(0,1)) +
     ylim(-0.7,0.7) +
@@ -283,10 +289,16 @@ plot_epi_distr_boxplot <- function(mutations, predicted_score = NULL) {
   return(g)
 }
 
-plot_epi_distr_histogram <- function(mutations, predicted_score = NULL) {
+plot_epi_distr_histogram <- function(
+    mutations, predicted_score = NULL, n_panels = 3,
+    panel_seq_from = 0, panel_seq_to = 1
+) {
   
   g <- ggplot(mutations) +
-    epi_class_background_panel(stack_vertical = FALSE) +
+    epi_class_background_panel(
+      n_panels, seq_from = panel_seq_from, seq_to = panel_seq_to,
+      stack_vertical = FALSE
+    ) +
     geom_histogram(
       aes(x = Prob_PLP), binwidth = 0.02,
       fill = "grey30", alpha = 0.8, boundary = 0, closed = "left"

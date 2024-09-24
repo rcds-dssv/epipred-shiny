@@ -102,7 +102,7 @@ SingleVarUI <- function(id) {
       ns = NS(id),
       layout_columns(
         span("* The sequence can arise from multiple mutations.
-             Please select your mutation below.", style = "color:red;font-size:12px"),
+             Please select your mutation below.", style = "color:red;font-size:12px;display: table; margin: 0 auto;"),
         col_widths = c(-2, 8, -2)
       )
     ),
@@ -388,12 +388,18 @@ SingleVarServer <- function(id, mutations, gene, selected) {
       } else if (input$epi_dist == "boxplot") {
         plot_epi_distr_boxplot(
           mutations = mutations(),
-          predicted_score = epipred_prediction()$score
+          predicted_score = epipred_prediction()$score,
+          n_panels = 50,
+          panel_seq_from = 0,
+          panel_seq_to = 1
         )
       } else if (input$epi_dist == "histogram") {
         plot_epi_distr_histogram(
           mutations = mutations(),
-          predicted_score = epipred_prediction()$score
+          predicted_score = epipred_prediction()$score,
+          n_panels = 50,
+          panel_seq_from = -0.05,
+          panel_seq_to = 1.05
         )
       }
     }, res = 108)
