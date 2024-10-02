@@ -69,6 +69,12 @@ overall_help_text <- HTML(
   "
 )
 
+select_mutation_help_text <- 
+  "
+  If the Amino Acid sequence has multiple variants, you can choose the 
+  specific variant ID here.
+  "
+
 sequence_info_help_text <- 
   "
   Your sequence's information is displayed here.

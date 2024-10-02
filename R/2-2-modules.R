@@ -26,7 +26,9 @@ SingleVarUI <- function(id) {
     tags$head(tags$style(HTML(sprintf("#%s-val {text-align: center;}", id)))),
     titlePanel(h1("EpiPred Result Explorer", align = "center") ),
     
-    br(),  
+    br(),
+    # display main help text. default is to show.
+    # to hide as default, set open = FALSE
     accordion(
       accordion_panel(
         "Need help?",
@@ -44,7 +46,6 @@ SingleVarUI <- function(id) {
       col_widths = 12,
       style = 'border-bottom: 1px solid #c6c7c7'
     ),
-    
     
     tags$style(HTML(
       "
@@ -66,7 +67,7 @@ SingleVarUI <- function(id) {
       # select input gene
       card(
         card_body(
-          p(strong("Gene Select")),
+          p(strong("Select Gene")),
           selectInput(
             NS(id,"gene"),
             label = NULL,
@@ -95,6 +96,15 @@ SingleVarUI <- function(id) {
     layout_columns(
       actionButton(NS(id,"update"), "Submit", class = "btn btn-primary"),
       col_widths = c(-5,2,-5)
+    ),
+    
+    conditionalPanel(
+      condition = "output.snp_not_found == true",
+      ns = NS(id),
+      layout_columns(
+        uiOutput(NS(id, "snp_not_found_text")),
+        col_widths = c(-2, 8, -2)
+      )
     ),
     
     conditionalPanel(
@@ -127,6 +137,31 @@ SingleVarUI <- function(id) {
         card_header(
           class = "d-flex justify-content-between",
           div(
+            "Select Mutation ID", HTML('&nbsp;'),
+            tooltip(
+              bs_icon("question-circle-fill", color = "grey"),
+              select_mutation_help_text,
+              placement = "right"
+            )
+          ),
+        ),
+        card_body(
+          selectizeInput(
+            NS(id, "snp_id"),
+            label = NULL,
+            width = "100%",
+            choices = NULL
+          ),
+          style = "overflow: visible !important; justify-content: center;"
+        ),
+        style = "overflow: visible !important;",
+      ),
+      
+      # sequence information in text
+      card(
+        card_header(
+          class = "d-flex justify-content-between",
+          div(
             "Sequence Info", HTML('&nbsp;'),
             tooltip(
               bs_icon("question-circle-fill", color = "grey"),
@@ -135,33 +170,26 @@ SingleVarUI <- function(id) {
             )
           ),
         ),
-        "Unique Mutation ID:",
-        selectizeInput(
-          NS(id, "snp_id"),
-          label = NULL,
-          width = "100%",
-          choices = NULL
-        ),
         uiOutput(NS(id, "epipred_output_text")),
         style = "overflow: visible !important;"
-      ),
-      
-      # EpiPred colorbar plot
-      card(
-        card_header(
-          class = "d-flex justify-content-between",
-          div(
-            "Your Sequence's EpiPred Score", HTML('&nbsp;'),
-            tooltip(
-              bs_icon("question-circle-fill", color = "grey"),
-              colorbar_help_text1,
-              placement = "right"
-            )
-          ),
-        ),
-        plotOutput(NS(id,"epipred_bar"), height = 220), width = "10%",
-        style = "text-align:center;"
       )
+    ),
+    
+    # EpiPred colorbar plot
+    card(
+      card_header(
+        class = "d-flex justify-content-between",
+        div(
+          "Your Sequence's EpiPred Score", HTML('&nbsp;'),
+          tooltip(
+            bs_icon("question-circle-fill", color = "grey"),
+            colorbar_help_text1,
+            placement = "right"
+          )
+        ),
+      ),
+      plotOutput(NS(id,"epipred_bar"), height = 220), width = "10%",
+      style = "text-align:center; justify-content: center;"
     ),
     
     layout_column_wrap(
@@ -276,6 +304,19 @@ SingleVarServer <- function(id, mutations, gene, selected) {
       }
     })
     
+    output$snp_not_found <- reactive({
+      if (!variant_id_tmp() %in% mutations()$One_letter_Amino_Acid_change) {
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+    })
+    outputOptions(output, "snp_not_found", suspendWhenHidden = FALSE)
+    
+    output$snp_not_found_text <- renderUI(
+      span(sprintf("* Variant '%s' not found.", variant_id_tmp()), style = "color:red;font-size:12px;display: table; margin: 0 auto;")
+    )
+    
     # AA sequence can arise from different SNPs
     # If this is the case, have the user specify the SNP
     output$multiple_snps <- reactive({
@@ -302,8 +343,51 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     
     # retrieve prediction result for chosen variant
     epipred_prediction <- reactive({
-      get_epipred_prediction(isolate(variant_id()), mutations(), input$snp_id)
+      get_epipred_prediction(mutations(), isolate(variant_id()), input$snp_id)
     })
+    
+    gnomad_info <- reactive({
+      get_gnomad_maf(mutations(), isolate(variant_id()), input$snp_id)
+    })
+    
+    # display prediction output as text
+    output$epipred_output_text <- renderUI({
+      output_string <- paste0(
+          "<span>Sequence ID: ", "<strong>", variant_id(), "</strong>", 
+          "<br>Predicted Class: ", "<strong>", epipred_prediction()$class, "</strong>", 
+          "<br>Pathogenic Score: ", "<strong>", round(epipred_prediction()$score,2), "</strong></span>"
+        )
+      
+      if (gnomad_info()$full_allele_info) {
+        alt_count <- gnomad_info()$allele_count
+        total_count <- gnomad_info()$allele_number
+        has_have <- ifelse(alt_count == 1, "has", "have")
+        
+        gnomad_link <- sprintf(
+          "https://gnomad.broadinstitute.org/variant/%s?dataset=gnomad_r4",
+          extract_variant_id(isolate(input$snp_id))
+        )
+        gnomad_string <- sprintf(
+          paste0("<span>According to the ",
+                 "<a href=\"%s\" target=\"_blank\">gnomAD database</a>, ",
+                 "<strong>%s</strong> out of <strong>%s</strong> alleles %s this mutation.</span>"), 
+          gnomad_link, alt_count, total_count, has_have
+        )
+        output_string <- paste0(output_string, gnomad_string)
+      }
+      
+      return(HTML(output_string))
+    })
+    
+    # epipred colorbar output
+    output$epipred_bar <- renderPlot({
+      display_epipred_score(
+        epipred_prediction = epipred_prediction(),
+        epipred_colorbar = epipred_colorbar(),
+        bar_height = colorbar_height,
+        classification_label_type = 3
+      )
+    }, height = 230)
     
     # NGLViewer Output
     output$structure <- renderNGLVieweR({
@@ -340,27 +424,6 @@ SingleVarServer <- function(id, mutations, gene, selected) {
           )
         )
     })
-    
-    # display prediction output as text
-    output$epipred_output_text <- renderUI({
-      HTML(
-        paste0(
-          "<span>Sequence ID: ", "<strong>", variant_id(), "</strong></span>", 
-          "<span>Predicted Class: ", "<strong>", epipred_prediction()$class, "</strong></span>", 
-          "<span>Pathogenic Score: ", "<strong>", round(epipred_prediction()$score,2), "</strong></span>"
-        )
-      )
-    })
-    
-    # epipred colorbar output
-    output$epipred_bar <- renderPlot({
-      display_epipred_score(
-        epipred_prediction = epipred_prediction(),
-        epipred_colorbar = epipred_colorbar(),
-        bar_height = colorbar_height,
-        classification_label_type = 3
-      )
-    }, height = 230)
     
     # plot position vs score
     output$epi_score_indiv_plot <- renderPlot({

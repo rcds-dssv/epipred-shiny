@@ -26,8 +26,7 @@ clean_mutations <- function(mutations) {
   return(mutations)
 }
 
-# Function for retrieving epipred score
-get_epipred_prediction <- function(var_id, mutations, unique_id = NULL) {
+select_variant <- function(mutations, var_id, unique_id = NULL) {
   if (length(var_id) > 1) {
     warning("Only the first variant ID will be used to query.")
     var_id <- var_id[1]
@@ -46,6 +45,13 @@ get_epipred_prediction <- function(var_id, mutations, unique_id = NULL) {
       )
   }
   
+  return(epi_score)
+}
+
+# Function for retrieving epipred score
+get_epipred_prediction <- function(mutations, var_id, unique_id = NULL) {
+  epi_score <- select_variant(mutations, var_id, unique_id)
+  
   if (nrow(epi_score) == 0) {
     stop(sprintf("
                  Error in get_epipred_prediction(): 
@@ -58,7 +64,31 @@ get_epipred_prediction <- function(var_id, mutations, unique_id = NULL) {
     "score" = epi_score$Prob_PLP,
     "class" = epi_score$epipred_prediction
   )
+  
   return(prediction)
+}
+
+get_gnomad_maf <- function(mutations, var_id, unique_id = NULL) {
+  epi_score <- select_variant(mutations, var_id, unique_id)
+  
+  if (nrow(epi_score) == 0) {
+    stop(sprintf("
+                 Error in get_gnomad_maf(): 
+                 Variant ID not found in the data set. 
+                 var_id: %s, unique_id: %s
+                 ", var_id, unique_id))
+  }
+  
+  maf <- list(
+    "allele_count" = epi_score$gnomAD_AlleleCount,
+    "allele_number" = epi_score$gnomAD_AlleleNumber,
+    "max_faf_group" = epi_score$GroupMax.FAF.group,
+    "max_faf_frequency" = epi_score$GroupMax.FAF.frequency
+  )
+  
+  maf$full_allele_info <- !is.na(maf$allele_count) & !is.na(maf$allele_number)
+  
+  return(maf)
 }
 
 epipred_score_color_palette <- function(x, left_color = "#74B347", right_color = "#4E2A84", middle_color = "grey") {
@@ -104,4 +134,7 @@ get_pos_on_chr <- function(pos_character, to.numeric = TRUE) {
   return(positions)
 }
 
+extract_variant_id <- function(unique_id) {
+  str_extract(unique_id, "^[[:alnum:]]+-([[:alnum:]-]+)$", group = 1)
+}
 
