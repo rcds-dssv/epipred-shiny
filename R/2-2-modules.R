@@ -446,6 +446,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
           mutations = mutations(),
           epi_dist_summary = epi_dist_summary(),
           all_classes = epipred_class_,
+          class_labels = epipred_class_labels_,
           predicted_class = epipred_prediction()$class
         )
       } else if (input$epi_dist == "boxplot") {
@@ -482,11 +483,11 @@ TableDisplayUI <- function(id) {
     layout_columns(
       selectInput(NS(id,"class"),
                   "EpiPred Class:",
-                  c("All",epipred_class_)
+                  c("All", epipred_class_)
       ),
       selectInput(NS(id,"report"),
                   "Reported:",
-                  c("All",reported_sources)
+                  c("All", reported_sources)
       ),
       card(DT::dataTableOutput(NS(id,"table")), height = 600),
       

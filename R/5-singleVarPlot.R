@@ -184,13 +184,24 @@ plot_epi_raw <- function(var_id, mutations) {
   ggarrange(g_scatter, g_boxplot, ncol = 2, widths = c(4, 1), align = "h")
 }
 
-# We created simpler visualizations to show the distribution of the scores,
-# which are available as TODO
+# We created simpler visualizations to show the distribution of the scores
 
+# plot distribution of EpiPred Scores as barplot
+# x is the prediction category
+# mutations: mutation dataset
+# epi_dist_summary: distribution summary output from epi_dist_summary() function
+# all_classes: all classes of the prediction. The name of the vector is the class name
+#   the value of the vector is what's displayed in the plot
+# predicted_class: predicted class of a chosen variant to highlight. This is optional
 plot_epi_distr_barplot <- function(
-    mutations, epi_dist_summary, all_classes, predicted_class = NULL,
+    mutations, epi_dist_summary, all_classes, class_labels = NULL, predicted_class = NULL,
     alpha.lower = 0.7
 ) {
+  
+  if (is.null(class_labels)) {
+    class_labels <- all_classes
+  }
+  
   n_class_ <- length(all_classes)
   position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
   break_pos <- (position_seq[1:(length(position_seq)-1)] + position_seq[2:length(position_seq)]) / 2
@@ -236,7 +247,7 @@ plot_epi_distr_barplot <- function(
     scale_alpha_manual(values = alphamap) +
     scale_x_continuous(
       breaks = break_pos,
-      labels = all_classes
+      labels = class_labels
     ) +
     scale_y_continuous(labels = scales::percent) +
     xlab("Predicted Class") +

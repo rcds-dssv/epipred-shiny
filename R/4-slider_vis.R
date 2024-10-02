@@ -69,19 +69,21 @@ display_epipred_score <- function(
         fontface = "bold"
       )
   } else if (classification_label_type == 3) {
-    # convey direction of pathogenicity
+    # benign / pathogenic conveyed by arrow pointing outwards below the colorbar
+    # shows the direction of the classification
     
-    arrow_x_gap <- 0.03
-    arrow1_x <- 0.5 - arrow_x_gap; arrow2_x <- 0.5 + arrow_x_gap
+    arrow_x_gap_from_end <- 0.03
+    arrow_x_gap_from_center <- 0.18
+    arrow1_x <- 0.5 - arrow_x_gap_from_center; arrow2_x <- 0.5 + arrow_x_gap_from_center
     
     g <- g +
       geom_segment(
-        x = arrow1_x, xend = arrow_x_gap, y = -0.5,
+        x = arrow1_x, xend = arrow_x_gap_from_end, y = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
         size = 0.5
       ) +
       geom_segment(
-        x = arrow2_x, xend = 1 - arrow_x_gap, y = -0.5,
+        x = arrow2_x, xend = 1 - arrow_x_gap_from_end, y = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
         size = 0.5
       ) +

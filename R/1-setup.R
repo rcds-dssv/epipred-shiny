@@ -42,3 +42,7 @@ reported_sources <- c(
 epipred_class_ <- c(
   "BLB", "ambiguous", "PLP"
 )
+
+epipred_class_labels_ <- c(
+  "Benign / \nLikely Benign", "Ambiguous", "Pathogenic / \nLikely Pathogenic"
+)
