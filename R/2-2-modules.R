@@ -588,6 +588,8 @@ AllVarUI <- function(id) {
         plotOutput(NS(id,"marginal_plot"))
       )
     ),
+    
+    # display warning output ouside the plot area
     div(
       verbatimTextOutput(NS(id,"allvar_plot_text"), FALSE),
       class = "warning-class"
@@ -629,10 +631,12 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
       y_log_scale = FALSE
     )
     
+    # filter data and prepare inputs for plotting based on user input
     observe({
       # subset mutations data based on reported source
       mutations_subset <- mutations() %>% filter(new_class %in% input$report)
       
+      # filter out variants with missing allele count
       if (input$var_with_mac) {
         mutations_subset <- mutations_subset %>% filter(!is.na(gnomAD_AlleleCount))
       }
@@ -645,7 +649,6 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
         plot_items$var1 <- input$var1
         plot_items$x_log_scale <- FALSE
       }
-      
       if (input$var2 == "log_allele_count") {
         plot_items$var2 <- "gnomAD_AlleleCount"
         plot_items$y_log_scale <- TRUE
@@ -665,8 +668,8 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
       plot_items$final_data <- mutations_final
     })
     
+    # display warning message if missing values were removed
     output$allvar_plot_text <- renderText({
-      # n_diff <- nrow(mutations()) - nrow(mutations_na_filtered())
       if (plot_items$n_miss_counts > 0) {
         return(sprintf("Warning: %s rows with missing values in %s and %s were removed.", plot_items$n_miss_counts, input$var1, input$var2))
       } else {
