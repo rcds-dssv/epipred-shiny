@@ -543,6 +543,14 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
 # Module for exploring prediction result for all variants in a given gene
 AllVarUI <- function(id) {
   page_fixed(
+    tags$head(
+      tags$style(HTML("
+        .warning-class pre {
+          color: red;
+        }                
+      "))
+    ),
+    
     # Title
     titlePanel("All Variants Summary"),
     
@@ -571,6 +579,7 @@ AllVarUI <- function(id) {
         selectInput(NS(id,"margin_type"), strong("Margin Plot Type"), choices = c("density", "histogram", "boxplot", "violin", "densigram")),
         radioButtons(NS(id,"color_group"), strong("Color By"), choices = c("Variant Class" = "new_class", "EpiPred Class" = "epipred_prediction")),
         checkboxGroupInput(NS(id,"report"), strong("Reported"), choices = report_source, selected = report_source),
+        checkboxInput(NS(id,"var_with_mac"), strong(" Limit to Variants with AC"), value = FALSE),
         bg = "#f5f5f5"
       ),
       
@@ -578,6 +587,10 @@ AllVarUI <- function(id) {
       card(
         plotOutput(NS(id,"marginal_plot"))
       )
+    ),
+    div(
+      verbatimTextOutput(NS(id,"allvar_plot_text"), FALSE),
+      class = "warning-class"
     )
   )
 }
@@ -603,17 +616,79 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
       )
     })
     
+    # since there can be missing values, if the subset data has missing values,
+    # display a warning message
+    # plot_items holds number of observations removed due to missing value
+    # after filtering step, and the final data used for plotting
+    plot_items <- reactiveValues(
+      n_miss_counts = 0,
+      final_data = data.frame(),
+      var1 = "",
+      var2 = "",
+      x_log_scale = FALSE,
+      y_log_scale = FALSE
+    )
+    
+    observe({
+      # subset mutations data based on reported source
+      mutations_subset <- mutations() %>% filter(new_class %in% input$report)
+      
+      if (input$var_with_mac) {
+        mutations_subset <- mutations_subset %>% filter(!is.na(gnomAD_AlleleCount))
+      }
+      
+      # if log allele count is chosen, log transform
+      if (input$var1 == "log_allele_count") {
+        plot_items$var1 <- "gnomAD_AlleleCount"
+        plot_items$x_log_scale <- TRUE
+      } else {
+        plot_items$var1 <- input$var1
+        plot_items$x_log_scale <- FALSE
+      }
+      
+      if (input$var2 == "log_allele_count") {
+        plot_items$var2 <- "gnomAD_AlleleCount"
+        plot_items$y_log_scale <- TRUE
+      } else {
+        plot_items$var2 <- input$var2
+        plot_items$y_log_scale <- FALSE
+      }
+      
+      # filter out missing values
+      mutations_final <- mutations_subset %>%
+        filter(!is.na(.data[[plot_items$var1]]) & !is.na(.data[[plot_items$var2]]))
+      
+      # update reactive values
+      # calculate number of missing values removed
+      plot_items$n_miss_counts <- nrow(mutations_subset) - nrow(mutations_final)
+      # save final data
+      plot_items$final_data <- mutations_final
+    })
+    
+    output$allvar_plot_text <- renderText({
+      # n_diff <- nrow(mutations()) - nrow(mutations_na_filtered())
+      if (plot_items$n_miss_counts > 0) {
+        return(sprintf("Warning: %s rows with missing values in %s and %s were removed.", plot_items$n_miss_counts, input$var1, input$var2))
+      } else {
+        return(NULL)
+      }
+    })
+    
     # marginal plot output
     output$marginal_plot <- renderPlot({
+      # only run when data is available
       req(length(input$report) > 0)
+      req(nrow(plot_items$final_data) > 0)
+
       marginal_plot(
-        mutations = mutations(),
-        var1 = input$var1,
-        var2 = input$var2,
+        mutations = plot_items$final_data,
+        var1 = plot_items$var1,
+        var2 = plot_items$var2,
         margin_type = input$margin_type,
-        reported = input$report,
         color_group = input$color_group,
-        highlight_id = dt_selected_index()
+        highlight_id = dt_selected_index(),
+        x_log_scale = plot_items$x_log_scale,
+        y_log_scale = plot_items$y_log_scale
       )
     })
   })

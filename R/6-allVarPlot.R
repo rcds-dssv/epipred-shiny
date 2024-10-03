@@ -73,9 +73,10 @@ score_v_position <- function(mutations, score) {
 marginal_plot <- function(
     mutations, var1, var2, 
     margin_type = "density", 
-    reported = c("VUS", "Simulation", "BLB", "PLP"),
     color_group = "new_class",
-    highlight_id = NULL
+    highlight_id = NULL,
+    x_log_scale = FALSE,
+    y_log_scale = FALSE
 ) {
   # create color mapping for report source
   reported_sources <- c("VUS", "Simulation", "BLB", "PLP")
@@ -87,6 +88,7 @@ marginal_plot <- function(
   epipred_class_colormap <- epipred_score_color_ramp(c(0, 0.5, 1))
   names(epipred_class_colormap) <- epipred_classes
   
+  # create color mapping based on chosen group
   if (color_group == "new_class") {
     colormap <- reported_colormap
   } else if (color_group == "epipred_prediction") {
@@ -95,33 +97,38 @@ marginal_plot <- function(
     stop("Error in marginal_plot: invalid color_group")
   }
   
-  # subset data to included select reported source
-  subset_data <- mutations %>% filter(new_class %in% reported)
-  
   # create main scatter plot
-  g <- ggplot(subset_data) +
+  g <- ggplot(mutations) +
     geom_point(aes(x = .data[[var1]], y = .data[[var2]], color = .data[[color_group]])) +
     scale_discrete_manual(aesthetics = "color", values = colormap) +
     theme_bw() +
     theme(legend.position = "bottom")
   
-  if (any(highlight_id %in% subset_data$id)) {
-    highlight_id <- highlight_id[highlight_id %in% subset_data$id]
+  # if variants are highlighted in the displayed dataframe in the shiny app
+  # highlight those variants in the plot
+  if (any(highlight_id %in% mutations$id)) {
+    highlight_id <- highlight_id[highlight_id %in% mutations$id]
     
-    highlighted <- subset_data$id %in% highlight_id
+    highlighted <- mutations$id %in% highlight_id
     
-    highlight_x <- subset_data[[var1]][highlighted]
-    highlight_y <- subset_data[[var2]][highlighted]
-    highlight_fill <- colormap[as.character(subset_data[[color_group]][highlighted])]
+    highlight_x <- mutations[[var1]][highlighted]
+    highlight_y <- mutations[[var2]][highlighted]
+    highlight_fill <- colormap[as.character(mutations[[color_group]][highlighted])]
     
     g <- g + 
       annotate("point", x = highlight_x, y = highlight_y, fill = highlight_fill, size = 5, pch = 21, color = "black", stroke = 1.3)
   }
   
+  # apply log transformation if specified
+  if (x_log_scale) {
+    g <- g + scale_x_continuous(transform = "log2")
+  }
+  if (y_log_scale) {
+    g <- g + scale_y_continuous(transform = "log2")
+  }
+  
   # apply marginal plot
   gmarg <- ggMarginal(g, type = margin_type, margins = "both", groupColour = TRUE, groupFill = TRUE)
-  
-  
   
   return(gmarg)
 }
