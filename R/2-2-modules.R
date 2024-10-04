@@ -71,11 +71,12 @@ SingleVarUI <- function(id) {
           selectInput(
             NS(id,"gene"),
             label = NULL,
-            choices = genes_avail,
+            choices = genes_avail_,
             selected = NULL
           ),
           class = "align-items-center",
-          style = "overflow: visible !important;"
+          style = "overflow: visible !important;",
+          align = "center"
         ),
         style = "overflow: visible !important;"
       ),
@@ -84,10 +85,18 @@ SingleVarUI <- function(id) {
       card(
         card_body(
           p(strong("Input Amino Acid Sequence"), style="text-align: center;"),
-          textInput(NS(id,"val"), label = NULL, value = "A2P"),
+          selectizeInput(
+            NS(id,"val"),
+            label = NULL,
+            selected = aa_id_default,
+            choices = aa_id_default
+          ),
+          # textInput(NS(id,"val"), label = NULL, value = "A2P"),
           class = "align-items-center",
+          style = "overflow: visible !important;",
           align = "center"
-        )
+        ),
+        style = "overflow: visible !important;"
       ),
       col_widths = c(-1, 5,5, -1)
     ),
@@ -146,7 +155,7 @@ SingleVarUI <- function(id) {
           ),
         ),
         card_body(
-          selectizeInput(
+          selectInput(
             NS(id, "snp_id"),
             label = NULL,
             width = "100%",
@@ -276,7 +285,23 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         inputId = "gene",
         label = NULL,
         selected = gene(),
-        choices = genes_avail
+        choices = genes_avail_
+      )
+    })
+    
+    # Get Amino Acid Sequnce IDs
+    aa_seq_ids <- reactive({
+      mutations() %>%
+        pull(One_letter_Amino_Acid_change)
+    })
+    
+    observe({
+      updateSelectizeInput(
+        session = session,
+        inputId = "val",
+        label = NULL,
+        selected = "A2P",
+        choices = aa_seq_ids()
       )
     })
     
@@ -334,7 +359,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         filter(One_letter_Amino_Acid_change == variant_id()) %>%
         pull(hg38_uniq_ID)
       
-      updateSelectizeInput(
+      updateSelectInput(
         session = session,
         inputId = "snp_id",
         choices = unique_id_choices
@@ -354,7 +379,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     output$epipred_output_text <- renderUI({
       output_string <- paste0(
           "<span>Sequence ID: ", "<strong>", variant_id(), "</strong>", 
-          "<br>Predicted Class: ", "<strong>", epipred_prediction()$class, "</strong>", 
+          "<br>Predicted Class: ", "<strong>", epipred_class_labels_[epipred_prediction()$class == epipred_class_], "</strong>", 
           "<br>Pathogenic Score: ", "<strong>", round(epipred_prediction()$score,2), "</strong></span>"
         )
       
@@ -385,7 +410,9 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         epipred_prediction = epipred_prediction(),
         epipred_colorbar = epipred_colorbar(),
         bar_height = colorbar_height,
-        classification_label_type = 3
+        classification_label_type = 3,
+        line_center = FALSE,
+        line_width = 3.5
       )
     }, height = 230)
     
@@ -493,7 +520,7 @@ TableDisplayUI <- function(id) {
       
       # download button
       downloadButton(NS(id,"downloadData"), label = "Download"),
-      col_widths = c(4,4,-4,12,12)
+      col_widths = c(3,3,-6,12,12)
     )
   )
 }
@@ -571,22 +598,31 @@ AllVarUI <- function(id) {
         selectInput(
           NS(id,"gene"),
           label = strong("Gene"),
-          choices = genes_avail,
+          choices = genes_avail_,
           selected = NULL
         ),
         selectInput(NS(id,"var1"), strong("x Variable"), choices = scatterplot_vars, selected = scatterplot_vars[1]),
         selectInput(NS(id,"var2"), strong("y Variable"), choices = scatterplot_vars, selected = scatterplot_vars[2]),
         selectInput(NS(id,"margin_type"), strong("Margin Plot Type"), choices = c("density", "histogram", "boxplot", "violin", "densigram")),
-        radioButtons(NS(id,"color_group"), strong("Color By"), choices = c("Variant Class" = "new_class", "EpiPred Class" = "epipred_prediction")),
+        selectInput(
+          NS(id,"color_group"),
+          strong("Color By"),
+          choices = c(
+            "Variant Class" = "new_class",
+            "EpiPred Class" = "epipred_prediction",
+            "GroupMax Genetic Ancestry" = "GroupMax.FAF.group"
+          )),
         checkboxGroupInput(NS(id,"report"), strong("Reported"), choices = report_source, selected = report_source),
-        checkboxInput(NS(id,"var_with_mac"), strong(" Limit to Variants with AC"), value = FALSE),
+        checkboxInput(NS(id,"var_with_mac"), strong(" Limit to Variants with Allele Count"), value = FALSE),
         bg = "#f5f5f5"
       ),
       
       # Display plot output
       card(
         plotOutput(NS(id,"marginal_plot"))
-      )
+      ),
+      
+      height = "100%"
     ),
     
     # display warning output ouside the plot area
@@ -614,7 +650,7 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
         inputId = "gene",
         label = NULL,
         selected = gene(),
-        choices = genes_avail
+        choices = genes_avail_
       )
     })
     
@@ -624,7 +660,7 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
     # after filtering step, and the final data used for plotting
     plot_items <- reactiveValues(
       n_miss_counts = 0,
-      final_data = data.frame(),
+      plot_data = data.frame(),
       var1 = "",
       var2 = "",
       x_log_scale = FALSE,
@@ -665,13 +701,13 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
       # calculate number of missing values removed
       plot_items$n_miss_counts <- nrow(mutations_subset) - nrow(mutations_final)
       # save final data
-      plot_items$final_data <- mutations_final
+      plot_items$plot_data <- mutations_final
     })
     
     # display warning message if missing values were removed
     output$allvar_plot_text <- renderText({
       if (plot_items$n_miss_counts > 0) {
-        return(sprintf("Warning: %s rows with missing values in %s and %s were removed.", plot_items$n_miss_counts, input$var1, input$var2))
+        return(sprintf("Warning: %s rows with missing values in %s or %s were removed.", plot_items$n_miss_counts, input$var1, input$var2))
       } else {
         return(NULL)
       }
@@ -681,10 +717,10 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
     output$marginal_plot <- renderPlot({
       # only run when data is available
       req(length(input$report) > 0)
-      req(nrow(plot_items$final_data) > 0)
+      req(nrow(plot_items$plot_data) > 0)
 
       marginal_plot(
-        mutations = plot_items$final_data,
+        mutations = plot_items$plot_data,
         var1 = plot_items$var1,
         var2 = plot_items$var2,
         margin_type = input$margin_type,

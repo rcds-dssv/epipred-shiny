@@ -10,15 +10,21 @@ library(RColorBrewer)
 library(ggpubr)
 library(ggExtra)
 library(bsicons)
+library(forcats)
 
 # show available genes
-genes_avail <- c("STXBP1")
+genes_avail_ <- c("STXBP1")
 
 # list mapping from gene to file
 # the name of list is the gene name, and the value is the path to the file
 genes_file_map <- list(
   "STXBP1" = "data/STXBP1.csv"
 )
+
+# default value to show for selecting Amino Acid ID
+# because of how input$val is updated, setting it to an existing sequence id
+# in the default gene is necessary to prevent shiny app from crashing
+aa_id_default <- "A2P"
 
 vars <- c("ClinPred_score","VARITY_R_score","am_pathogenicity","Prob_PLP")
 

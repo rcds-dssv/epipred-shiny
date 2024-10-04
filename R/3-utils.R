@@ -1,12 +1,15 @@
 # Utility functions
 
-clean_mutations <- function(mutations) {
-  duplicate_id <- mutations %>%
-    count(One_letter_Amino_Acid_change) %>%
-    filter(n > 1) %>%
-    pull(One_letter_Amino_Acid_change)
-  if (length(duplicate_id) > 0) {
-    warning("Multiple variants may share the same ID. Mutation with the highest score is selected.")
+clean_mutations <- function(mutations, warn_duplicates = TRUE) {
+  if (warn_duplicates) {
+    duplicate_id <- mutations %>%
+      count(One_letter_Amino_Acid_change) %>%
+      filter(n > 1) %>%
+      pull(One_letter_Amino_Acid_change)
+    
+    if (length(duplicate_id) > 0) {
+      warning("Multiple variants may share the same ID. Mutation with the highest score is selected.")
+    }
   }
   
   # clean up the mutations data frame

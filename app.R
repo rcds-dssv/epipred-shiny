@@ -57,7 +57,7 @@ server <- function(input, output) {
     # mutations_ <- read.csv(file.path("data",paste0(gene(), "_DTv2.csv")))
     
     # clean up mutations data
-    clean_mutations(mutations_)
+    clean_mutations(mutations_, warn_duplicates = FALSE)
   })
   
   # reactive variable for selecting row entry

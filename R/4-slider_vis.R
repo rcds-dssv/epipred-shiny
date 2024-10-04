@@ -13,7 +13,8 @@ library(grid)
 # display epipred score on the colorbar
 display_epipred_score <- function(
     epipred_prediction, epipred_colorbar, bar_height = 1,
-    classification_label_type = 1
+    classification_label_type = 1, line_center = TRUE,
+    line_width = 1
   ) {
   
   # extract score
@@ -72,20 +73,27 @@ display_epipred_score <- function(
     # benign / pathogenic conveyed by arrow pointing outwards below the colorbar
     # shows the direction of the classification
     
-    arrow_x_gap_from_end <- 0.03
+    arrow_x_gap_from_end <- 0.015
     arrow_x_gap_from_center <- 0.18
     arrow1_x <- 0.5 - arrow_x_gap_from_center; arrow2_x <- 0.5 + arrow_x_gap_from_center
     
     g <- g +
       geom_segment(
+        x = arrow1_x, xend = arrow2_x, y = -0.5,
+        arrow = NULL,
+        size = 0.5*line_width,
+        linetype = "dashed",
+        color = "grey70"
+      ) +
+      geom_segment(
         x = arrow1_x, xend = arrow_x_gap_from_end, y = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
-        size = 0.5
+        size = 0.5*line_width
       ) +
       geom_segment(
         x = arrow2_x, xend = 1 - arrow_x_gap_from_end, y = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
-        size = 0.5
+        size = 0.5*line_width
       ) +
       annotate(
         geom = "text", x = arrow1_x / 2, y = -0.7,
@@ -95,14 +103,22 @@ display_epipred_score <- function(
         geom = "text", x = (arrow2_x + 1) / 2, y = -0.7,
         label = "Likely Pathogenic", size = 6, fontface = "bold"
       ) +
-      geom_segment(
-        x = 0.5, y = (bar_height / 2) + 0.05, yend = -(bar_height / 2) - 0.05,
-        linetype = "dashed", color = "grey50"
+      annotate(
+        geom = "text", x = 0.5, y = -0.7,
+        label = "Ambiguous", size = 6, fontface = "bold"
       ) +
       annotate(
         geom = "text", x = c(0-0.03, 1 + 0.03), y = 0,
         label = c("0","1"), fontface = "bold", size = 6
       )
+    
+    if (line_center) {
+      g <- g +
+        geom_segment(
+          x = 0.5, y = (bar_height / 2) + 0.05, yend = -(bar_height / 2) - 0.05,
+          linetype = "dashed", color = "grey50"
+        )
+    }
   }
   
   return(g)

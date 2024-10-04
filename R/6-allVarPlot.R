@@ -69,6 +69,14 @@ score_v_position <- function(mutations, score) {
   return(g)
 }
 
+append_na <- function(x, add_na = TRUE) {
+  if (add_na) {
+    return(c(x, "Missing"))
+  } else {
+    return(x)
+  }
+}
+
 # create marginal plot
 marginal_plot <- function(
     mutations, var1, var2, 
@@ -78,28 +86,43 @@ marginal_plot <- function(
     x_log_scale = FALSE,
     y_log_scale = FALSE
 ) {
-  # create color mapping for report source
-  reported_sources <- c("VUS", "Simulation", "BLB", "PLP")
-  reported_colormap <- brewer.pal(length(reported_sources), "Set2")
-  names(reported_colormap) <- reported_sources
-  
-  # create color mapping for Epipred Class
-  epipred_classes <- c("BLB", "ambiguous", "PLP")
-  epipred_class_colormap <- epipred_score_color_ramp(c(0, 0.5, 1))
-  names(epipred_class_colormap) <- epipred_classes
+  color_group_has_na <- any(is.na(mutations[[color_group]]))
   
   # create color mapping based on chosen group
   if (color_group == "new_class") {
+    
+    # create color mapping for report source
+    reported_sources <- append_na(c("VUS", "Simulation", "BLB", "PLP"), color_group_has_na)
+    reported_colormap <- brewer.pal(length(reported_sources), "Set2")
+    names(reported_colormap) <- reported_sources
     colormap <- reported_colormap
+    
   } else if (color_group == "epipred_prediction") {
+    
+    # create color mapping for Epipred Class
+    epipred_classes <- append_na(c("BLB", "ambiguous", "PLP"), color_group_has_na)
+    epipred_class_colormap <- epipred_score_color_ramp(c(0, 0.5, 1))
+    names(epipred_class_colormap) <- epipred_classes
     colormap <- epipred_class_colormap
+    
+  } else if (color_group == "GroupMax.FAF.group") {
+    
+    # create color mapping for report source
+    genetic_ancestry <- append_na(c("afr", "ami", "amr", "asj", "eas", "fin", "mid", "nfe", "sas"), color_group_has_na)
+    ancestry_colormap <- pals::glasbey(length(genetic_ancestry))
+    names(ancestry_colormap) <- genetic_ancestry
+    colormap <- ancestry_colormap
+    
   } else {
     stop("Error in marginal_plot: invalid color_group")
   }
   
+  mutations <- mutations %>%
+    mutate(color_group = fct_na_value_to_level(.data[[color_group]], "Missing"))
+  
   # create main scatter plot
   g <- ggplot(mutations) +
-    geom_point(aes(x = .data[[var1]], y = .data[[var2]], color = .data[[color_group]])) +
+    geom_point(aes(x = .data[[var1]], y = .data[[var2]], color = color_group)) +
     scale_discrete_manual(aesthetics = "color", values = colormap) +
     theme_bw() +
     theme(legend.position = "bottom")
@@ -113,7 +136,7 @@ marginal_plot <- function(
     
     highlight_x <- mutations[[var1]][highlighted]
     highlight_y <- mutations[[var2]][highlighted]
-    highlight_fill <- colormap[as.character(mutations[[color_group]][highlighted])]
+    highlight_fill <- colormap[as.character(mutations$color_group[highlighted])]
     
     g <- g + 
       annotate("point", x = highlight_x, y = highlight_y, fill = highlight_fill, size = 5, pch = 21, color = "black", stroke = 1.3)
