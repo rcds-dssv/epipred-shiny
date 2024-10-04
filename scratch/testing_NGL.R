@@ -1,4 +1,4 @@
-NGLVieweR(pdbfile)  %>%
+NGLVieweR(pdbfile_)  %>%
   addRepresentation(
     "cartoon",
     param = list(name = "cartoon", color = "residueindex")

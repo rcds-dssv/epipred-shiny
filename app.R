@@ -52,7 +52,7 @@ server <- function(input, output) {
       # for debugging
       print(paste("Current gene:", gene())) 
     }
-    mutations_ <- read.csv(genes_file_map[[gene()]])
+    mutations_ <- read.csv(genes_file_map_[[gene()]])
     # pretend we are using the gene input -- will need to uncomment this when more genes are added
     # mutations_ <- read.csv(file.path("data",paste0(gene(), "_DTv2.csv")))
     

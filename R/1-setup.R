@@ -27,25 +27,23 @@ genes_avail_ <- c("STXBP1")
 
 # list mapping from gene to file
 # the name of list is the gene name, and the value is the path to the file
-genes_file_map <- list(
+genes_file_map_ <- list(
   "STXBP1" = "data/STXBP1.csv"
 )
 
 # default value to show for selecting Amino Acid ID
 # because of how input$val is updated, setting it to an existing sequence id
 # in the default gene is necessary to prevent shiny app from crashing
-aa_id_default <- "A2P"
-
-vars <- c("ClinPred_score","VARITY_R_score","am_pathogenicity","Prob_PLP")
+aa_id_default_ <- "A2P"
 
 # used for checkboxgroupinput in all var module
-report_source <- c("VUS", "Simulation", "BLB", "PLP")
+report_source_ <- c("VUS", "Simulation", "BLB", "PLP")
 
 # pdb file for 3d representation of protein
-pdbfile <- "data/pdb/stxbp1.pdb"
+pdbfile_ <- "data/pdb/stxbp1.pdb"
 
 # Available variables for marginal plot in "For Researchers" tab
-scatterplot_vars <- c(
+scatterplot_vars_ <- c(
   "EpiPred Raw Score" = "Prob_PLP",
   "ClinPred Score" = "ClinPred_score",
   "Varity R Score" = "VARITY_R_score",
@@ -57,7 +55,7 @@ scatterplot_vars <- c(
 )
 
 # Reported sources selection for filtering marginal plot in "For Researchers" tab
-reported_sources <- c(
+reported_sources_ <- c(
   "VUS", "Simulation", "BLB", "PLP"
 )
 

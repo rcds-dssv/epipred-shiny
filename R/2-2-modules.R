@@ -88,8 +88,8 @@ SingleVarUI <- function(id) {
           selectizeInput(
             NS(id,"val"),
             label = NULL,
-            selected = aa_id_default,
-            choices = aa_id_default
+            selected = aa_id_default_,
+            choices = aa_id_default_
           ),
           # textInput(NS(id,"val"), label = NULL, value = "A2P"),
           class = "align-items-center",
@@ -418,7 +418,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     
     # NGLViewer Output
     output$structure <- renderNGLVieweR({
-      NGLVieweR(pdbfile) %>%
+      NGLVieweR(pdbfile_) %>%
         addRepresentation(
           "cartoon",
           param = list(name = "cartoon", color = "residueindex")
@@ -514,7 +514,7 @@ TableDisplayUI <- function(id) {
       ),
       selectInput(NS(id,"report"),
                   "Reported:",
-                  c("All", reported_sources)
+                  c("All", reported_sources_)
       ),
       card(DT::dataTableOutput(NS(id,"table")), height = 600),
       
@@ -606,8 +606,8 @@ AllVarUI <- function(id) {
           choices = genes_avail_,
           selected = NULL
         ),
-        selectInput(NS(id,"var1"), strong("x Variable"), choices = scatterplot_vars, selected = scatterplot_vars[1]),
-        selectInput(NS(id,"var2"), strong("y Variable"), choices = scatterplot_vars, selected = scatterplot_vars[2]),
+        selectInput(NS(id,"var1"), strong("x Variable"), choices = scatterplot_vars_, selected = scatterplot_vars_[1]),
+        selectInput(NS(id,"var2"), strong("y Variable"), choices = scatterplot_vars_, selected = scatterplot_vars_[2]),
         selectInput(NS(id,"margin_type"), strong("Margin Plot Type"), choices = c("density", "histogram", "boxplot", "violin", "densigram")),
         selectInput(
           NS(id,"color_group"),
@@ -617,7 +617,7 @@ AllVarUI <- function(id) {
             "EpiPred Class" = "epipred_prediction",
             "GroupMax Genetic Ancestry" = "GroupMax.FAF.group"
           )),
-        checkboxGroupInput(NS(id,"report"), strong("Reported"), choices = report_source, selected = report_source),
+        checkboxGroupInput(NS(id,"report"), strong("Reported"), choices = report_source_, selected = report_source_),
         checkboxInput(NS(id,"var_with_mac"), strong(" Limit to Variants with Allele Count"), value = FALSE),
         bg = "#f5f5f5"
       ),

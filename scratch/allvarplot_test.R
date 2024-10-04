@@ -15,7 +15,7 @@ input$var2 <- "ClinPred_score"
 input$margin_type <- "density"
 input$color_group <- "GroupMax.FAF.group"
 input$var_with_mac <- FALSE
-input$report <- report_source
+input$report <- report_source_
 
 plot_items <- list(
   n_miss_counts = 0,
@@ -85,9 +85,9 @@ marginal_plot <- function(
   if (color_group == "new_class") {
     
     # create color mapping for report source
-    reported_sources <- append_na(c("VUS", "Simulation", "BLB", "PLP"), color_group_has_na)
-    reported_colormap <- brewer.pal(length(reported_sources), "Set2")
-    names(reported_colormap) <- reported_sources
+    reported_sources_ <- append_na(c("VUS", "Simulation", "BLB", "PLP"), color_group_has_na)
+    reported_colormap <- brewer.pal(length(reported_sources_), "Set2")
+    names(reported_colormap) <- reported_sources_
     colormap <- reported_colormap
     
   } else if (color_group == "epipred_prediction") {
