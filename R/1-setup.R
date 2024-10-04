@@ -12,6 +12,16 @@ library(ggExtra)
 library(bsicons)
 library(forcats)
 
+# original column names of mutations data
+mutations_colnames_ <- c(
+  "Three_letter_Amino_Acid_change", "One_letter_Amino_Acid_change", "chrom",
+  "pos_hg38", "ref", "alt", "hg38_uniq_ID", "AA_POS", "AA_REF",
+  "AA_ALT", "X3AA_REF", "X3AA_ALT", "ClinPred_score", "VARITY_R_score",
+  "am_pathogenicity", "Prob_PLP", "gnomAD_AlleleCount", "gnomAD_AlleleNumber",
+  "GroupMax.FAF.group", "GroupMax.FAF.frequency", "new_class",
+  "epipred_prediction"
+)
+
 # show available genes
 genes_avail_ <- c("STXBP1")
 

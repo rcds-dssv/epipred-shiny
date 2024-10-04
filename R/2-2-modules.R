@@ -529,7 +529,8 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
   moduleServer(id, function(input, output, session) {
     # Filter data table based on selections
     selectedData <- reactive({
-      data <- data.frame(mutations())
+      data <- mutations() %>% 
+        data.frame()
       if (input$class != "All") {
         data <- data[data$epipred_prediction == input$class,]
       }
@@ -559,7 +560,11 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
         paste("Table_Out",Sys.Date(),".csv", sep = "")
       },
       content = function(file) {
-        write.csv(selectedData() %>% select(-id), file, row.names = FALSE)
+        write.csv(
+          selectedData() 
+          %>% select(all_of(mutations_colnames_)), 
+          file, row.names = FALSE
+        )
       }
     )
   })
