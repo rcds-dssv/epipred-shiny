@@ -14,7 +14,7 @@ library(grid)
 display_epipred_score <- function(
     epipred_prediction, epipred_colorbar, bar_height = 1,
     classification_label_type = 1, line_center = TRUE,
-    line_width = 1
+    line_width = 1, ambiguous_range = c(0.35,0.65)
   ) {
   
   # extract score
@@ -73,39 +73,40 @@ display_epipred_score <- function(
     # benign / pathogenic conveyed by arrow pointing outwards below the colorbar
     # shows the direction of the classification
     
-    arrow_x_gap_from_end <- 0.015
-    arrow_x_gap_from_center <- 0.18
-    arrow1_x <- 0.5 - arrow_x_gap_from_center; arrow2_x <- 0.5 + arrow_x_gap_from_center
+    arrow_x_gap_from_end <- 0.015 # gap from end of bar to the arrow (both left and right)
+    # arrow_x_gap_from_center <- 0.18 # unused
+    left_arrow_start <- ambiguous_range[1]
+    right_arrow_start <- ambiguous_range[2]
     
     g <- g +
       geom_segment(
-        x = arrow1_x, xend = arrow2_x, y = -0.5,
+        x = left_arrow_start, xend = right_arrow_start, y = -0.5,
         arrow = NULL,
-        size = 0.5*line_width,
+        size = 0.3*line_width,
         linetype = "dashed",
         color = "grey70"
       ) +
       geom_segment(
-        x = arrow1_x, xend = arrow_x_gap_from_end, y = -0.5,
+        x = left_arrow_start, xend = arrow_x_gap_from_end, y = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
         size = 0.5*line_width
       ) +
       geom_segment(
-        x = arrow2_x, xend = 1 - arrow_x_gap_from_end, y = -0.5,
+        x = right_arrow_start, xend = 1 - arrow_x_gap_from_end, y = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
         size = 0.5*line_width
       ) +
       annotate(
-        geom = "text", x = arrow1_x / 2, y = -0.7,
-        label = "Likely Benign", size = 6, fontface = "bold"
+        geom = "text", x = left_arrow_start / 2, y = -0.8,
+        label = "Likely\nBenign", size = 5, fontface = "bold"
       ) +
       annotate(
-        geom = "text", x = (arrow2_x + 1) / 2, y = -0.7,
-        label = "Likely Pathogenic", size = 6, fontface = "bold"
+        geom = "text", x = (right_arrow_start + 1) / 2, y = -0.8,
+        label = "Likely\nPathogenic", size = 5, fontface = "bold"
       ) +
       annotate(
-        geom = "text", x = 0.5, y = -0.7,
-        label = "Ambiguous", size = 6, fontface = "bold"
+        geom = "text", x = mean(ambiguous_range), y = -0.7,
+        label = "Ambiguous", size = 5, fontface = "bold"
       ) +
       annotate(
         geom = "text", x = c(0-0.03, 1 + 0.03), y = 0,
@@ -128,9 +129,9 @@ display_epipred_score <- function(
 # create a colorbar and draw many segments to give the illusion of a gradient
 create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_color = "#4E2A84",
                              middle_color = "grey", outline_width = 1, bar_height = 1,
-                             void = TRUE) {
+                             void = TRUE, gradient_transform_function = function(x) x) {
 
-  bardata <- create_bardata(nbars, bar_height)
+  bardata <- create_bardata(nbars, bar_height, gradient_transform_function)
   outline_data <- create_outline_data(bar_height)
   
   g <- ggplot(bardata,aes(x=x,y=y)) +
@@ -140,13 +141,11 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
       show.legend = FALSE
     ) +
     # gradient scheme
-    scale_color_gradient2(
-      low = left_color,
-      mid = middle_color,
-      high = right_color,
-      midpoint = 0.5,
-      aesthetics = "color",
-      transform = "sqrt"
+    scale_color_gradientn(
+      colors = epipred_score_color_ramp(
+        seq(0, 1, length.out = 100), 
+        left_color = left_color, right_color = right_color, middle_color = middle_color
+      )
     ) +
     # add outline
     geom_path(
@@ -219,13 +218,15 @@ create_epipred_colorbar2 <- function(
 }
 
 # create data frame of n equally spaced bars
-create_bardata <- function(n, bar_height) {
-  data.frame(
+create_bardata <- function(n, bar_height, gradient_transform_function) {
+  df_out <- data.frame(
     x = seq(0, 1, length.out = n),
     y = -0.5 * bar_height,
-    yend = 0.5 * bar_height,
-    z = seq(from = 0, to = 1, length.out = n)
+    yend = 0.5 * bar_height
   )
+  df_out$z <- gradient_transform_function(df_out$x)
+  
+  return(df_out)
 }
 
 # create data frame of outline segments

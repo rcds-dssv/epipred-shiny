@@ -32,7 +32,7 @@ SingleVarUI <- function(id) {
     accordion(
       accordion_panel(
         "Need help?",
-        overall_help_text
+        patients_help_text
       ),
       open = TRUE
     ),
@@ -121,7 +121,7 @@ SingleVarUI <- function(id) {
       ns = NS(id),
       layout_columns(
         span("* The sequence can arise from multiple mutations.
-             Please select your mutation below.", style = "color:red;font-size:12px;display: table; margin: 0 auto;"),
+             Please select your mutation below from \"Select Mutation ID\" card.", style = "color:red;font-size:14px;display: table; margin: 0 auto;"),
         col_widths = c(-2, 8, -2)
       )
     ),
@@ -211,7 +211,10 @@ SingleVarUI <- function(id) {
             tooltip(
               bs_icon("question-circle-fill", color = "grey"),
               protein_help_text,
-              placement = "right"
+              placement = "right",
+              options = list(
+                "customClass" = "testing"
+              )
             )
           ),
           dropdownButton(
@@ -312,7 +315,9 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     epipred_colorbar <- reactive(
       create_epipred_colorbar(
         nbars = 10000,
-        bar_height = colorbar_height
+        bar_height = colorbar_height,
+        middle_color = "grey90",
+        gradient_transform_function = function(x) transform_function_1(x, ambiguous_range_list_[[gene()]])
       )
     )
     
@@ -412,13 +417,14 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         bar_height = colorbar_height,
         classification_label_type = 3,
         line_center = FALSE,
-        line_width = 3.5
+        line_width = 3.5,
+        ambiguous_range = ambiguous_range_list_[[gene()]]
       )
     }, height = 230)
     
     # NGLViewer Output
     output$structure <- renderNGLVieweR({
-      NGLVieweR(pdbfile_) %>%
+      NGLVieweR(pdbfile_map_[[gene()]]) %>%
         addRepresentation(
           "cartoon",
           param = list(name = "cartoon", color = "residueindex")

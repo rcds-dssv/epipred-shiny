@@ -28,7 +28,7 @@ genes_avail_ <- c("STXBP1")
 # list mapping from gene to file
 # the name of list is the gene name, and the value is the path to the file
 genes_file_map_ <- list(
-  "STXBP1" = "data/STXBP1.csv"
+  "STXBP1" = "data/STXBP1_final.csv"
 )
 
 # default value to show for selecting Amino Acid ID
@@ -40,7 +40,14 @@ aa_id_default_ <- "A2P"
 report_source_ <- c("VUS", "Simulation", "BLB", "PLP")
 
 # pdb file for 3d representation of protein
-pdbfile_ <- "data/pdb/stxbp1.pdb"
+pdbfile_map_ <- list(
+  "STXBP1" = "data/pdb/AF-P61764-F1-model_v4_STXBP1.pdb"
+)
+
+# Ambiguous range for the EpiPred Colorbar
+ambiguous_range_list_ <- list(
+  "STXBP1" = c(0.625179, 0.8711709)
+)
 
 # Available variables for marginal plot in "For Researchers" tab
 scatterplot_vars_ <- c(

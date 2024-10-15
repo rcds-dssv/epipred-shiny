@@ -33,7 +33,7 @@ home_text <- HTML(
 )
 
 # Edit this to change the help text in the "For Patients" tab
-overall_help_text <- HTML(
+patients_help_text <- HTML(
   "
   <p>
     In this tab, you can search for Amino Acid (AA) sequences from epilepsy-associated genes with a missense variant (mutation).
@@ -103,7 +103,7 @@ distr_help_text <-
 allvar_help_text <- HTML(
   "
   <p>In this tab, you can explore across different genes and compare positions and various scores.
-  Use the control on the left to select the gene explore relationships</p>
+  Use the control on the left to select the gene explore relationships.</p>
      
   <p>The table below shows all the missense variants in the gene. You can filter the table by EpiPred class
   and Reported source. Clicking on a row highlights the mutation in the above plot.</p>

@@ -141,3 +141,12 @@ extract_variant_id <- function(unique_id) {
   str_extract(unique_id, "^[[:alnum:]]+-([[:alnum:]-]+)$", group = 1)
 }
 
+transform_function_1 <- function(x, uncertainty_range = c(0.35, 0.65)) {
+  quantile_vals <- qbeta(c(0.42, 0.58), shape1 = 0.3, shape2 = 0.3)
+  quantile_index <- findInterval(c(uncertainty_range[1], uncertainty_range[2]), x)
+  x_copy <- x
+  x_copy[1:quantile_index[1]] <- seq(x[1], quantile_vals[1], length.out = quantile_index[1])
+  x_copy[quantile_index[1]:quantile_index[2]] <- seq(quantile_vals[1], quantile_vals[2], length.out = quantile_index[2] - quantile_index[1] + 1)
+  x_copy[quantile_index[2]:length(x)] <- seq(quantile_vals[2], x[length(x)], length.out = length(x) - quantile_index[2] + 1)
+  return(x_copy)
+}
