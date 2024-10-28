@@ -34,7 +34,10 @@ genes_file_map_ <- list(
 # default value to show for selecting Amino Acid ID
 # because of how input$val is updated, setting it to an existing sequence id
 # in the default gene is necessary to prevent shiny app from crashing
-aa_id_default_ <- "A2P"
+aa_id_default_ <- "A2V"
+
+# URL for a document on how to find variant id
+var_id_search_url_ <- "https://docs.google.com/presentation/d/1VIn24tBOnbThHt147XGp9QWZYopRdBVoTVCEybnjGXY"
 
 # used for checkboxgroupinput in all var module
 report_source_ <- c("VUS", "Simulation", "BLB", "PLP")

@@ -121,7 +121,8 @@ SingleVarUI <- function(id) {
       ns = NS(id),
       layout_columns(
         span("* The sequence can arise from multiple mutations.
-             Please select your mutation below from \"Select Mutation ID\" card.", style = "color:red;font-size:14px;display: table; margin: 0 auto;"),
+             Please select your mutation below from \"Select Mutation ID\" card.",
+             style = "color:red;font-size:14px;display: table; margin: 0 auto;"),
         col_widths = c(-2, 8, -2)
       )
     ),
@@ -141,7 +142,7 @@ SingleVarUI <- function(id) {
       width = NULL,
       style = css(grid_template_columns = "1fr 2fr"),
       
-      # sequence information in text
+      # variant ID selection card
       card(
         card_header(
           class = "d-flex justify-content-between",
@@ -155,6 +156,10 @@ SingleVarUI <- function(id) {
           ),
         ),
         card_body(
+          p(
+            a("How do I locate Variant ID?", href = var_id_search_url_, target = "_blank"),
+            style = "font-size: 14px;"
+          ),
           selectInput(
             NS(id, "snp_id"),
             label = NULL,
@@ -303,7 +308,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         session = session,
         inputId = "val",
         label = NULL,
-        selected = "A2P",
+        selected = aa_seq_ids()[1],
         choices = aa_seq_ids()
       )
     })
