@@ -5,27 +5,33 @@ home_text <- HTML(
   "
   <h5><div>
   <p>
-    An The Epilepsy Multiplatform Variant Prediction project is an NIH-sponsoredCenter Without Walls (CWOW) that will develop a modular, 
-    highly integrated platform approach to accelerate determination of the functional, pharmacological, neuronal network and whole animal 
-    consequences of genetic variants among a range of clinical epilepsy types. Read more about <a href=https://epimvp.med.umich.edu/>EpiMVP</a>
-  </p>
-    
-   <img src=gene2ppl.jpg alt=gene2ppl style=float:right;>
-    
-  <p>
-    The Gene Variant and Curation Core (GVCC) integrates data from clinical genetic data and functional readouts from EpiMVP and 
-    utilizes the power of machine learning to create a computational algorithm called EpiPred.
+    The Epilepsy Multiplatform Variant Prediction (EpiMVP) project is an NIH-sponsored Center Without Walls (CWOW) which aims to develop a modular, highly integrated platform to resolve variants of uncertain significance (VUS) in a subset of genes implicated in the rare pediatric epilepsies.
   </p>
     
   <p>
-    EpiPred is currently only available for the gene <a href=https://www.ncbi.nlm.nih.gov/books/NBK396561/>STXBP1 </a> 
-    but will be expanded to other epilepsy-associated genes in the future. 
-    On this website you can query individual missense variants and receive a prediction score as to whether that variant is likely 
-    pathogenic or benign. We have also calculated EpiPred scores for all possible missense variants in STXBP1.
+    The Gene Variant and Curation Core (GVCC) integrates data from clinical genetic data and functional readouts from EpiMVP and utilizes the power of machine learning to create a computational tool called EpiPred. EpiPred is currently only available for the gene STXBP1 but will be expanded to other epilepsy-related genes soon. 
+  </p>
+    
+  <p>
+    In the ‘Check my Variant’ tab you can query individual missense variants that you may have obtained as part of a clinical or research-based genetic test. Once you enter in a variant, the EpiPred prediction, i.e. more likely pathogenic or benign, will be returned.
+  </p>
+  
+  <p>
+    In the ‘For researchers’ tab we have calculated EpiPred scores for all possible missense variants in STXBP1 and provide these scores in comparison to a variety of other variant effect predictors and STXBP1 features.
   </p>
   
   <p>  
-    The manuscript detailing this work is available here and all code is freely available at the EpiMVP github.
+    The manuscript detailing this work is available here and all code is freely available at the Carvill Lab Github.
+  </p>
+  
+  <p>
+    This study was sponsored by the NIH EpiMVP CWOW NINDS U54 NS117170
+  </p>
+  
+  <p>
+    <small><small>
+      Disclaimer: The information on this website is not intended for direct genetic and clinical diagnostic use or medical decision-making. We recommend review of any information provided by this website with a genetics professional. Individuals should not change their health behavior on the basis of information contained on this website. Access to general information is provided for educational purposes only. You are liable or responsible for any advice, course of treatment, diagnosis or any other information, services or product obtained through this site.
+    </small></small>
   </p>
   
   </div>

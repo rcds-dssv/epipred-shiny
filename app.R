@@ -26,7 +26,7 @@ ui <- page_fluid(
     title = "EpiPred",
     # card(actionButton("test", "test", icon = icon("redo"))), # for debugging
     nav_panel("Welcome Page", HomeUI("home"), value = "welcome_page"),
-    nav_panel("For Patients", SingleVarUI("single_var"), value = "for_patients"),
+    nav_panel("Check My Variant", SingleVarUI("single_var"), value = "for_patients"),
     nav_panel("For Researchers",
       AllVarUI("all_var"),
       hr(style = "border-top: 1px solid #000000;"),

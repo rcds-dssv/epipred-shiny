@@ -8,10 +8,12 @@ HomeUI <- function(id) {
   page_fixed(
     layout_columns(
       card(
-        span(
-          p(shiny::img(src = "gene2mouse.jpg"), style = "text-align:center"),
-          h1("EpiMVP", style="text-align:center;")
+        div(
+          shiny::img(src = "epimvp-logo.png", height = "150px"),
+          shiny::img(src = "epipred-logo.jpg", height = "150px"),
+          style = "display: flex; justify-content: center; gap:75px; align-items: center;"
         ),
+        br(),
         card_body(home_text)
       )
     )
