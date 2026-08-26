@@ -3,9 +3,9 @@
 clean_mutations <- function(mutations, warn_duplicates = TRUE) {
   if (warn_duplicates) {
     duplicate_id <- mutations %>%
-      count(One_letter_Amino_Acid_change) %>%
+      count(variant_id) %>%
       filter(n > 1) %>%
-      pull(One_letter_Amino_Acid_change)
+      pull(variant_id)
     
     if (length(duplicate_id) > 0) {
       warning("Multiple variants may share the same ID. Mutation with the highest score is selected.")
@@ -15,12 +15,16 @@ clean_mutations <- function(mutations, warn_duplicates = TRUE) {
   # clean up the mutations data frame
   mutations <- mutations %>%
     mutate(
-      new_class = factor(
-        new_class,
-        levels = c("BLB", "PLP", "Simulation", "VUS")
+      # matches the real category values in the harmonized data (see
+      # R/0-data-prep.R) -- "conflict" and "simulation" didn't exist in
+      # STXBP1's original new_class column, and "Simulation" is now
+      # lowercase "simulation" to match the other four genes
+      primary_class = factor(
+        primary_class,
+        levels = c("BLB", "PLP", "VUS", "conflict", "simulation")
       ),
-      epipred_prediction = factor(
-        epipred_prediction,
+      epipred_band = factor(
+        epipred_band,
         levels = c("BLB", "ambiguous", "PLP")
       ),
       id = row_number() # id only used for internal row identification
@@ -37,14 +41,14 @@ select_variant <- function(mutations, var_id, unique_id = NULL) {
   
   if (is.null(unique_id)) {
     epi_score <- mutations %>%
-      filter(One_letter_Amino_Acid_change %in% var_id) %>%
+      filter(variant_id %in% var_id) %>%
       arrange(desc(Prob_PLP)) %>%
       slice(1)
   } else {
     epi_score <- mutations %>%
       filter(
-        One_letter_Amino_Acid_change == var_id,
-        hg38_uniq_ID == unique_id
+        variant_id == var_id,
+        variant_key == unique_id
       )
   }
   
@@ -65,7 +69,7 @@ get_epipred_prediction <- function(mutations, var_id, unique_id = NULL) {
   
   prediction <- list(
     "score" = epi_score$Prob_PLP,
-    "class" = epi_score$epipred_prediction
+    "class" = epi_score$epipred_band
   )
   
   return(prediction)
@@ -85,11 +89,16 @@ get_gnomad_maf <- function(mutations, var_id, unique_id = NULL) {
   maf <- list(
     "allele_count" = epi_score$gnomAD_AlleleCount,
     "allele_number" = epi_score$gnomAD_AlleleNumber,
-    "max_faf_group" = epi_score$GroupMax.FAF.group,
-    "max_faf_frequency" = epi_score$GroupMax.FAF.frequency
+    "max_faf_group" = epi_score$gnomAD_ancestry_group,
+    "max_faf_frequency" = epi_score$gnomAD_ancestry_freq,
+    "genome_build" = epi_score$genome_build,
+    "variant_key" = epi_score$variant_key
   )
   
-  maf$full_allele_info <- !is.na(maf$allele_count) & !is.na(maf$allele_number)
+  # has_full_allele_info is already computed once during data harmonization
+  # (R/0-data-prep.R) as exactly !is.na(allele_count) & !is.na(allele_number)
+  # -- reuse it instead of recomputing the same thing here.
+  maf$full_allele_info <- epi_score$has_full_allele_info
   
   return(maf)
 }
@@ -137,6 +146,12 @@ get_pos_on_chr <- function(pos_character, to.numeric = TRUE) {
   return(positions)
 }
 
+# Only valid for hg38-format variant keys (e.g. STXBP1's "A2V-9-127612408-C-T").
+# The 4 newer genes' variant_key is hg19-based (hg19_key, a different format
+# entirely -- see TODO.md) and gnomAD v4 is hg38-native, so callers must
+# check genome_build == "hg38" before using this (see SingleVarServer's
+# output$epipred_output_text in R/2-2-modules.R) rather than calling it on
+# hg19 data, which would silently build a link to the wrong variant.
 extract_variant_id <- function(unique_id) {
   str_extract(unique_id, "^[[:alnum:]]+-([[:alnum:]-]+)$", group = 1)
 }

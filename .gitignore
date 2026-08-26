@@ -1,3 +1,8 @@
+# Local files to ignore
+Carvill_EpiPred_update_project_summary.docx
+Researcher_asks/
+TODO.md
+
 # History files
 .Rhistory
 .Rapp.history
@@ -51,3 +56,4 @@ rsconnect/
 # data files
 data/
 
+.positai

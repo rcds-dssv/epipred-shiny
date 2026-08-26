@@ -3,13 +3,6 @@
 
 library(grid)
 
-# # Test data
-# test_var_id <- "p.A2P"
-# test_var <- mutations %>%
-#   filter(AA_Change == test_var_id)
-# epipred_raw_score <- pull(test_var, EpiPred_Raw_Score)
-# epipred_class <- pull(test_var, EpiPred_Class)
-
 # display epipred score on the colorbar
 display_epipred_score <- function(
     epipred_prediction, epipred_colorbar, bar_height = 1,
@@ -80,19 +73,19 @@ display_epipred_score <- function(
     
     g <- g +
       geom_segment(
-        x = left_arrow_start, xend = right_arrow_start, y = -0.5,
+        x = left_arrow_start, xend = right_arrow_start, y = -0.5, yend = -0.5,
         arrow = NULL,
         size = 0.3*line_width,
         linetype = "dashed",
         color = "grey70"
       ) +
       geom_segment(
-        x = left_arrow_start, xend = arrow_x_gap_from_end, y = -0.5,
+        x = left_arrow_start, xend = arrow_x_gap_from_end, y = -0.5, yend = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
         size = 0.5*line_width
       ) +
       geom_segment(
-        x = right_arrow_start, xend = 1 - arrow_x_gap_from_end, y = -0.5,
+        x = right_arrow_start, xend = 1 - arrow_x_gap_from_end, y = -0.5, yend = -0.5,
         arrow = arrow(type = "closed", ends = "last", length = unit(0.1, "inches")),
         size = 0.5*line_width
       ) +
@@ -116,7 +109,7 @@ display_epipred_score <- function(
     if (line_center) {
       g <- g +
         geom_segment(
-          x = 0.5, y = (bar_height / 2) + 0.05, yend = -(bar_height / 2) - 0.05,
+          x = 0.5, xend = 0.5, y = (bar_height / 2) + 0.05, yend = -(bar_height / 2) - 0.05,
           linetype = "dashed", color = "grey50"
         )
     }
@@ -136,7 +129,7 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
   
   g <- ggplot(bardata,aes(x=x,y=y)) +
     geom_segment(
-      aes(color = z, yend = yend),
+      aes(xend = x, color = z, yend = yend),
       stat="identity",
       show.legend = FALSE
     ) +
@@ -236,22 +229,6 @@ create_outline_data <- function(bar_width) {
     x = c(-bar_width/2,bar_width/2,bar_width/2,-bar_width/2,-bar_width/2,0),
     y = c(0,0,1,1,0,0)
   )
-}
-
-# calculate and save distribution summary of the EpiPred Raw score 
-# for chosen dataset
-get_epi_distribution_summary <- function(mutations) {
-  # get proportion of variants that fall into the predicted class
-  class_proportions <- mutations$epipred_prediction %>%
-    factor(levels = epipred_class_) %>%
-    table() %>%
-    prop.table() %>%
-    c()
-  
-  # get kernel density estimate of the epipred score
-  epipred_kd <- density(mutations$Prob_PLP, from = 0, to = 1, na.rm = TRUE, adjust=0.5)
-  
-  return(list(class_proportions = class_proportions, density = epipred_kd))
 }
 
 # draw distribution (either proportion or density) on top of the colorbar

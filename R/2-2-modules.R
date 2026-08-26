@@ -5,19 +5,51 @@ source("R/2-1-help-texts.R")
 
 # Module for the Home Tab
 HomeUI <- function(id) {
+  ns <- NS(id)
   page_fixed(
     layout_columns(
       card(
         div(
-          shiny::img(src = "epimvp-logo.png", height = "150px"),
-          shiny::img(src = "epipred-logo.jpg", height = "150px"),
+          shiny::img(src = "epimvp-logo.jpg", height = "150px"),
+          shiny::img(src = "epipred-logo.png", height = "150px"),
           style = "display: flex; justify-content: center; gap:75px; align-items: center;"
         ),
         br(),
         card_body(home_text)
       )
+    ),
+
+    br(),
+
+    # Gene selector + per-gene ACMG class waffle plot (TODO.md Phase 2).
+    # "EpiPred genes -- these could maybe be buttons... all figures will
+    # be the same but pull from different data" (V2 landing page.docx).
+    card(
+      card_header("Variant Classification by Gene"),
+      div(
+        GeneSelectorUI(ns("gene_selector")),
+        style = "display:flex; justify-content:center;"
+      ),
+      plotOutput(ns("class_waffle"), height = "500px"),
+      # Static text explaining the classes -- doesn't change per gene
+      # ("the text in the text box will be static and apply to all
+      # genes, it's just an explanation of the data" -- same doc).
+      card_body(landing_legend_text)
     )
   )
+}
+
+# Server for the landing page: mounts the shared gene selector and renders
+# the per-gene ACMG class waffle plot. `mutations` is the app-wide reactive
+# already filtered to the current gene (same one every other tab uses).
+HomeServer <- function(id, mutations, gene) {
+  moduleServer(id, function(input, output, session) {
+    GeneSelectorServer("gene_selector", gene)
+
+    output$class_waffle <- renderPlot({
+      class_waffle_plot(gene(), mutations())
+    })
+  })
 }
 
 # Single Var --------------------------------------------------------------
@@ -63,26 +95,13 @@ SingleVarUI <- function(id) {
       "
     )),
     
+    # Gene selection (shared component -- TODO.md Phase 1)
+    p(strong("Select Gene"), style = "text-align: center;"),
+    GeneSelectorUI(NS(id, "gene_selector")),
+
     # Sequence selection input
     layout_columns(
-      
-      # select input gene
-      card(
-        card_body(
-          p(strong("Select Gene")),
-          selectInput(
-            NS(id,"gene"),
-            label = NULL,
-            choices = genes_avail_,
-            selected = NULL
-          ),
-          class = "align-items-center",
-          style = "overflow: visible !important;",
-          align = "center"
-        ),
-        style = "overflow: visible !important;"
-      ),
-      
+
       # Text Input Amino Acid Sequence
       card(
         card_body(
@@ -100,7 +119,7 @@ SingleVarUI <- function(id) {
         ),
         style = "overflow: visible !important;"
       ),
-      col_widths = c(-1, 5,5, -1)
+      col_widths = c(-4, 4, -4)
     ),
     
     # Submit button
@@ -235,7 +254,26 @@ SingleVarUI <- function(id) {
             size = "sm"
           )
         ),
-        NGLVieweROutput(NS(id,"structure"))
+        # All 5 genes currently have a .pdb file mapped (see pdbfile_map_
+        # in R/1-setup.R) -- STXBP1's is a real structure, the other 4 are
+        # temporary rendering placeholders (not the genes' real proteins)
+        # pending real files. Still checking file.exists() / showing the
+        # friendly fallback below rather than assuming, so this degrades
+        # gracefully instead of letting NGLVieweR error if a path here
+        # ever goes missing (e.g. a future gene added without a file yet).
+        conditionalPanel(
+          condition = "output.pdb_available == true",
+          ns = NS(id),
+          NGLVieweROutput(NS(id,"structure"))
+        ),
+        conditionalPanel(
+          condition = "output.pdb_available == false",
+          ns = NS(id),
+          div(
+            "3-D structure not yet available for this gene.",
+            style = "text-align:center; color:#888; padding: 60px 20px;"
+          )
+        )
       ),
       
       # distribution of score
@@ -255,11 +293,11 @@ SingleVarUI <- function(id) {
             radioButtons(
               NS(id, "epi_dist"), label = NULL,
               choices = c(
-                "Class Proportion (Barplot)" = "barplot",
+                "Distribution by Class (Histogram)" = "class_histogram",
                 "Distribution (Boxplot)" = "boxplot",
                 "Distribution (Histogram)" = "histogram"
               ),
-              selected = "barplot"
+              selected = "class_histogram"
             ),
             
             icon = bs_icon("gear"), width = "300px",
@@ -281,42 +319,51 @@ SingleVarServer <- function(id, mutations, gene, selected) {
   moduleServer(id, function(input, output, session) {
     colorbar_height <- 2/3
     
-    # update gene reactive variable based on input
-    observeEvent(input$gene,{
-      gene(input$gene)
-    })
+    # Gene selection (shared component -- TODO.md Phase 1). Replaces the old
+    # selectInput + observeEvent/updateSelectInput pairing below (kept only
+    # in git history): GeneSelectorServer both updates gene() when a button
+    # here is clicked, and keeps this tab's button row in sync when gene()
+    # changes from elsewhere (e.g. the For Researchers tab's copy of this
+    # same component). `selected` (whether this tab is the active nav
+    # panel) is no longer needed for gene sync as a result, but is left in
+    # the function signature since app.R still passes it positionally.
+    GeneSelectorServer("gene_selector", gene)
     
-    # reactively update gene input based on selection
-    # this keeps the gene up to date with the other tab
-    observe({
-      req(!selected())
-      updateSelectInput(
-        session = session,
-        inputId = "gene",
-        label = NULL,
-        selected = gene(),
-        choices = genes_avail_
-      )
+    # Whether a PDB structure file actually exists on disk for the current
+    # gene. Checking file.exists() (not just "is this gene in the map")
+    # means the 3D viewer starts working automatically the moment a
+    # gene's .pdb file is dropped into data/pdb/ -- no code change needed.
+    pdb_path <- reactive({
+      f <- pdbfile_map_[[gene()]]
+      if (is.null(f)) NA_character_ else f
     })
-    
+    pdb_available <- reactive(!is.na(pdb_path()) && file.exists(pdb_path()))
+    output$pdb_available <- reactive(pdb_available())
+    outputOptions(output, "pdb_available", suspendWhenHidden = FALSE)
+
     # Get Amino Acid Sequnce IDs
     aa_seq_ids <- reactive({
       mutations() %>%
-        pull(One_letter_Amino_Acid_change)
+        pull(variant_id)
     })
     
     observe({
+      # server = TRUE switches this to server-side selectize: the full
+      # choice vector (up to ~10.8k variant IDs for CHD2) stays on the
+      # server, and the client only requests matches as the user types,
+      # instead of every ID being pushed into the browser's DOM/JS index
+      # up front. This is exactly what the "large number of options...
+      # consider using server-side selectize" warning was asking for --
+      # eliminates the warning and the client-side slowdown it described.
       updateSelectizeInput(
         session = session,
         inputId = "val",
         label = NULL,
         selected = aa_seq_ids()[1],
-        choices = aa_seq_ids()
+        choices = aa_seq_ids(),
+        server = TRUE
       )
     })
-    
-    # used for getting epipred distribution for visualization
-    epi_dist_summary <- reactive(get_epi_distribution_summary(mutations()))
     
     # create colorbar
     epipred_colorbar <- reactive(
@@ -335,18 +382,49 @@ SingleVarServer <- function(id, mutations, gene, selected) {
       isolate(toupper(input$val))
     })
     variant_id <- reactiveVal()
+
+    # Whether the user's most recent manual "type an ID + Submit" attempt
+    # failed to match anything. Kept as its own reactiveVal (rather than
+    # computed straight from variant_id_tmp()/mutations()) so it can be
+    # explicitly cleared on a gene switch below -- otherwise a stale failed
+    # search from a previous gene would keep showing a "not found" warning
+    # on top of the newly auto-selected, perfectly valid default variant.
+    snp_search_failed_ <- reactiveVal(FALSE)
+
+    # ignoreInit = TRUE + triggering only on input$update (not on
+    # mutations()/gene changing) means this only runs on an actual Submit
+    # click, never as a side effect of switching genes.
+    observeEvent(input$update, {
+      candidate <- variant_id_tmp()
+      if (candidate %in% isolate(mutations())$variant_id) {
+        variant_id(candidate)
+        snp_search_failed_(FALSE)
+      } else {
+        snp_search_failed_(TRUE)
+      }
+    }, ignoreInit = TRUE)
+
+    # Default behavior: automatically select and display a real variant for
+    # whichever gene is currently active, rather than requiring the user to
+    # type an ID and press Submit before seeing anything. This re-fires
+    # every time aa_seq_ids() changes -- i.e. whenever the shared gene
+    # selector switches genes -- so it also replaces any stale variant_id()
+    # left over from the previously-selected gene (which would otherwise
+    # not exist in the new gene's data and could crash the lookup below),
+    # and clears any stale "not found" warning from a previous manual
+    # search. The manual "type an ID + Submit" flow above still works and
+    # takes precedence whenever the user actually uses it, since that
+    # observer only re-runs on a button click, not on every gene switch.
     observe({
-      if (variant_id_tmp() %in% mutations()$One_letter_Amino_Acid_change) {
-        variant_id(variant_id_tmp())
+      default_id <- aa_seq_ids()[1]
+      if (length(default_id) > 0 && !is.na(default_id)) {
+        variant_id(default_id)
+        snp_search_failed_(FALSE)
       }
     })
     
     output$snp_not_found <- reactive({
-      if (!variant_id_tmp() %in% mutations()$One_letter_Amino_Acid_change) {
-        return(TRUE)
-      } else {
-        return(FALSE)
-      }
+      snp_search_failed_()
     })
     outputOptions(output, "snp_not_found", suspendWhenHidden = FALSE)
     
@@ -357,7 +435,7 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     # AA sequence can arise from different SNPs
     # If this is the case, have the user specify the SNP
     output$multiple_snps <- reactive({
-      snp_n <- sum(mutations()$One_letter_Amino_Acid_change == variant_id())
+      snp_n <- sum(mutations()$variant_id == variant_id())
       if (snp_n > 1) {
         return(TRUE)
       } else {
@@ -366,24 +444,88 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     })
     outputOptions(output, "multiple_snps", suspendWhenHidden = FALSE)
     
+    # The set of variant_key values (individual SNPs) that all produce the
+    # currently-selected variant_id()'s amino acid change. Pulled out into
+    # its own named reactive (rather than an inline expression, as before)
+    # so both the updateSelectInput() call below AND the req() guards on
+    # epipred_prediction()/gnomad_info() further down can share the exact
+    # same list -- see the comment on those guards for why that sharing
+    # matters.
+    unique_id_choices <- reactive({
+      # variant_id() is normally set automatically as soon as a gene has
+      # data (see the default-selection observer above), so this req() is
+      # mostly a defensive fallback for the unlikely case of a gene with
+      # zero variants -- without it, filter(variant_id == variant_id())
+      # would error when variant_id() is NULL (dplyr requires the RHS to
+      # be length 1).
+      req(variant_id())
+
+      mutations() %>%
+        filter(variant_id == variant_id()) %>%
+        pull(variant_key)
+    })
+
     observe({
-      unique_id_choices <- mutations() %>%
-        filter(One_letter_Amino_Acid_change == variant_id()) %>%
-        pull(hg38_uniq_ID)
-      
       updateSelectInput(
         session = session,
         inputId = "snp_id",
-        choices = unique_id_choices
+        choices = unique_id_choices()
       )
     })
     
     # retrieve prediction result for chosen variant
+    # req(variant_id()) is a defensive fallback for the same near-zero-risk
+    # case as above (a gene with zero variants): without it, a NULL
+    # variant_id() reaching get_epipred_prediction()/get_gnomad_maf() would
+    # crash with an opaque, near-blank error (0-row match -> stop(sprintf(
+    # ..., NULL, ...)), and sprintf() with a NULL argument returns
+    # character(0), so the resulting error has no message at all). In normal
+    # operation variant_id() is always set automatically (see the
+    # default-selection observer above), so this should never actually
+    # trigger -- but if it ever did, req() makes these reactives, and
+    # everything downstream (output$epipred_bar, output$epi_score_distr,
+    # etc.), silently hold off rendering rather than crash.
     epipred_prediction <- reactive({
+      # req() guards against variant_id() being NULL/blank, but that alone
+      # isn't enough: right after a gene switch there's a brief window
+      # where variant_id() can still hold the *previous* gene's variant
+      # while mutations() has already updated to the new gene (the
+      # auto-default observer that corrects variant_id() hasn't run yet
+      # within this same reactive flush). Without this extra membership
+      # check, get_epipred_prediction() would stop() on that stale/mismatched
+      # ID -- a real (non-silent) error that briefly flashes red error text
+      # in the browser before the corrected variant_id() re-triggers this
+      # reactive a moment later. Checking membership makes this reactive
+      # silently (invisibly) suspend during that transient window instead.
+      req(variant_id() %in% mutations()$variant_id)
+      # Same idea, but for input$snp_id: whenever variant_id() changes (a
+      # gene switch, a fresh auto-default, OR -- the case that used to
+      # fire on literally every single Submit click -- the manual search
+      # button above), the unique_id_choices() observer pushes a brand
+      # new set of choices to the "Select Mutation ID" dropdown via
+      # updateSelectInput(). That's a real round trip to the browser and
+      # back: the client has to receive the new choices, pick one (the
+      # single/first one, since no selected= is given), and report that
+      # value back as the new input$snp_id. Until that round trip
+      # completes, input$snp_id server-side is still whatever it was
+      # before -- on first page load that's "" (the <select> starts with
+      # choices = NULL in the UI), and after a variant switch it's the
+      # PREVIOUS variant's key -- neither of which matches any variant_key
+      # for the newly-selected variant_id(). select_variant() treats a
+      # non-NULL unique_id as an exact-match filter (variant_id == var_id
+      # & variant_key == unique_id), so that stale/blank value produced
+      # zero rows and get_epipred_prediction() stop()'d -- a real error,
+      # visible as red text, every time. Requiring input$snp_id to
+      # actually be one of the current choices makes this reactive wait
+      # (silently) for that round trip to land instead.
+      req(input$snp_id %in% unique_id_choices())
       get_epipred_prediction(mutations(), isolate(variant_id()), input$snp_id)
     })
     
     gnomad_info <- reactive({
+      # Same guards as epipred_prediction() above -- see comments there.
+      req(variant_id() %in% mutations()$variant_id)
+      req(input$snp_id %in% unique_id_choices())
       get_gnomad_maf(mutations(), isolate(variant_id()), input$snp_id)
     })
     
@@ -400,16 +542,28 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         total_count <- gnomad_info()$allele_number
         has_have <- ifelse(alt_count == 1, "has", "have")
         
-        gnomad_link <- sprintf(
-          "https://gnomad.broadinstitute.org/variant/%s?dataset=gnomad_r4",
-          extract_variant_id(isolate(input$snp_id))
+        allele_sentence <- sprintf(
+          "<strong>%s</strong> out of <strong>%s</strong> alleles %s this mutation",
+          alt_count, total_count, has_have
         )
-        gnomad_string <- sprintf(
-          paste0("<span>According to the ",
-                 "<a href=\"%s\" target=\"_blank\">gnomAD database</a>, ",
-                 "<strong>%s</strong> out of <strong>%s</strong> alleles %s this mutation.</span>"), 
-          gnomad_link, alt_count, total_count, has_have
-        )
+        
+        # gnomAD v4 is hg38-native, so a v4 link only makes sense for
+        # hg38-coordinate data (currently just STXBP1 -- the 4 newer genes
+        # are hg19-based, see extract_variant_id()'s comment in
+        # R/3-utils.R). Show the same information as plain text for those
+        # instead of a clickable link that would point at the wrong variant.
+        if (identical(gnomad_info()$genome_build, "hg38")) {
+          gnomad_link <- sprintf(
+            "https://gnomad.broadinstitute.org/variant/%s?dataset=gnomad_r4",
+            extract_variant_id(gnomad_info()$variant_key)
+          )
+          gnomad_string <- sprintf(
+            "<span>According to the <a href=\"%s\" target=\"_blank\">gnomAD database</a>, %s.</span>",
+            gnomad_link, allele_sentence
+          )
+        } else {
+          gnomad_string <- sprintf("<span>According to gnomAD, %s.</span>", allele_sentence)
+        }
         output_string <- paste0(output_string, gnomad_string)
       }
       
@@ -431,7 +585,8 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     
     # NGLViewer Output
     output$structure <- renderNGLVieweR({
-      NGLVieweR(pdbfile_map_[[gene()]]) %>%
+      req(pdb_available())
+      NGLVieweR(pdb_path()) %>%
         addRepresentation(
           "cartoon",
           param = list(name = "cartoon", color = "residueindex")
@@ -443,15 +598,23 @@ SingleVarServer <- function(id, mutations, gene, selected) {
     })
     
     observeEvent(input$NGL_spin,{
+      req(pdb_available())
       NGLVieweR_proxy("structure") %>%
         updateSpin(input$NGL_spin)
     })
     
-    # when variant is updated, highlight the affected residue
+    # when variant is updated, highlight the affected residue.
+    # Uses aa_pos_structure, NOT raw AA_POS: for PCDH19, the PDB file's own
+    # residue numbering is offset from the full-protein AA_POS by a
+    # constant (confirmed empirically in R/0-data-prep.R, Q1b) -- using
+    # AA_POS directly would highlight the wrong residue for that gene.
+    # aa_pos_structure already falls back to AA_POS for genes with no such
+    # offset (everything except PCDH19).
     observeEvent(input$update, {
+      req(pdb_available())
       aa_pos <- mutations() %>%
-        filter(One_letter_Amino_Acid_change %in% variant_id()) %>%
-        pull(AA_POS) %>% 
+        filter(variant_id %in% variant_id()) %>%
+        pull(aa_pos_structure) %>% 
         min() %>%
         as.character()
       
@@ -465,29 +628,22 @@ SingleVarServer <- function(id, mutations, gene, selected) {
         )
     })
     
-    # plot position vs score
-    output$epi_score_indiv_plot <- renderPlot({
-      if (input$report_gg != "All") {
-        mutations_filtered <- mutations() %>%
-          filter(Reported == input$report_gg)
-      } else {
-        mutations_filtered <- mutations()
-      }
-      plot_epi_raw_violinplot(
-        var_id = variant_id(),
-        mutations = mutations_filtered
-      )
-    })
-    
     # plot distribution of epipred score
     output$epi_score_distr <- renderPlot({
-      if (input$epi_dist == "barplot") {
-        plot_epi_distr_barplot(
+      if (input$epi_dist == "class_histogram") {
+        # Replaces the old class-proportion barplot (TODO.md Phase 3),
+        # ported from Researcher_asks/code_for_plots/
+        # website_EpiPred_distribution_by_class.R -- uses mutations()
+        # directly (not a separate per-gene file) so the distribution
+        # shown always matches the classification used elsewhere on this
+        # tab, for all 5 genes. ambiguous_range_list_ supplies the same
+        # per-gene cutoff lines already used for the colorbar, instead of
+        # hardcoding 0.1/0.9 (which isn't correct for STXBP1 -- see
+        # TODO.md Q2).
+        plot_epi_distr_class_histogram(
           mutations = mutations(),
-          epi_dist_summary = epi_dist_summary(),
-          all_classes = epipred_class_,
-          class_labels = epipred_class_labels_,
-          predicted_class = epipred_prediction()$class
+          predicted_score = epipred_prediction()$score,
+          ambiguous_range = ambiguous_range_list_[[gene()]]
         )
       } else if (input$epi_dist == "boxplot") {
         plot_epi_distr_boxplot(
@@ -545,10 +701,10 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
       data <- mutations() %>% 
         data.frame()
       if (input$class != "All") {
-        data <- data[data$epipred_prediction == input$class,]
+        data <- data[data$epipred_band == input$class,]
       }
       if (input$report != "All") {
-        data <- data[data$new_class == input$report,]
+        data <- data[data$primary_class == input$report,]
       }
       data
     })
@@ -561,7 +717,9 @@ TableDisplayServer <- function(id, mutations, selected, dt_selected_index) {
         formatStyle(colnames(selectedData() %>% select(-id)), "white-space" = "nowrap")
     })
     
-    # update selected id
+    # update selected id (id = row_number(), assigned fresh in
+    # clean_mutations() every time mutations() reloads -- see
+    # R/3-utils.R -- so this works the same way for all 5 genes)
     observe({
       dt_selected_index(selectedData()[input$table_rows_selected,]$id)
     })
@@ -597,7 +755,7 @@ AllVarUI <- function(id) {
     ),
     
     # Title
-    titlePanel("All Variants Summary"),
+    titlePanel("Comparison of VEPs and other gene features"),
     
     accordion(
       accordion_panel(
@@ -609,16 +767,27 @@ AllVarUI <- function(id) {
     
     br(),
     
+    # Heatmap of predicted variant effect (TODO.md Phase 4), placed above
+    # the scatterplot section per for_researchers.docx. Shares the same
+    # gene selector as the scatterplot below (mounted once here; the
+    # scatterplot's own copy stays in sync via the shared `gene`
+    # reactiveVal, same as every other pair of gene selectors in the app).
+    card(
+      card_header("Heatmap of Predicted Variant Effect"),
+      # Interactive (post-delivery enhancement) -- plotOutput() swapped for
+      # plotly::plotlyOutput() to match class_heatmap_plot() now returning
+      # a plotly object (see R/8-heatmapPlot.R) instead of a static ggplot.
+      plotly::plotlyOutput(NS(id, "heatmap"), height = "500px")
+    ),
+    
+    br(),
+    
     layout_sidebar(
       
       # Controls for plot
       sidebar = sidebar(
-        selectInput(
-          NS(id,"gene"),
-          label = strong("Gene"),
-          choices = genes_avail_,
-          selected = NULL
-        ),
+        strong("Gene"),
+        GeneSelectorUI(NS(id, "gene_selector")),
         selectInput(NS(id,"var1"), strong("x Variable"), choices = scatterplot_vars_, selected = scatterplot_vars_[1]),
         selectInput(NS(id,"var2"), strong("y Variable"), choices = scatterplot_vars_, selected = scatterplot_vars_[2]),
         selectInput(NS(id,"margin_type"), strong("Margin Plot Type"), choices = c("density", "histogram", "boxplot", "violin", "densigram")),
@@ -626,9 +795,9 @@ AllVarUI <- function(id) {
           NS(id,"color_group"),
           strong("Color By"),
           choices = c(
-            "Variant Class" = "new_class",
-            "EpiPred Class" = "epipred_prediction",
-            "GroupMax Genetic Ancestry" = "GroupMax.FAF.group"
+            "Variant Class" = "primary_class",
+            "EpiPred Class" = "epipred_band",
+            "GroupMax Genetic Ancestry" = "gnomAD_ancestry_group"
           )),
         checkboxGroupInput(NS(id,"report"), strong("Reported"), choices = report_source_, selected = report_source_),
         checkboxInput(NS(id,"var_with_mac"), strong(" Limit to Variants with Allele Count"), value = FALSE),
@@ -654,22 +823,17 @@ AllVarUI <- function(id) {
 AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
   moduleServer(id, function(input,output,session) {
     
-    # update gene reactive variable based on input
-    observeEvent(input$gene,{
-      gene(input$gene)
-    })
+    # Gene selection (shared component -- TODO.md Phase 1). See the same
+    # comment in SingleVarServer above for why `selected` is unused here now.
+    GeneSelectorServer("gene_selector", gene)
     
-    # reactively update gene input based on selection
-    # this keeps the gene up to date with the other tab
-    observe({
-      req(!selected())
-      updateSelectInput(
-        session = session,
-        inputId = "gene",
-        label = NULL,
-        selected = gene(),
-        choices = genes_avail_
-      )
+    # Heatmap of predicted variant effect (TODO.md Phase 4) -- uses the
+    # full mutations() data, unfiltered by the "Reported" checkboxes
+    # below, since it's meant to show the whole predicted-effect
+    # landscape (mostly simulated variants) rather than only the
+    # clinically-observed ones the scatterplot filters to.
+    output$heatmap <- plotly::renderPlotly({
+      class_heatmap_plot(gene(), mutations())
     })
     
     # since there can be missing values, if the subset data has missing values,
@@ -688,7 +852,7 @@ AllVarServer <- function(id, mutations, gene, selected, dt_selected_index) {
     # filter data and prepare inputs for plotting based on user input
     observe({
       # subset mutations data based on reported source
-      mutations_subset <- mutations() %>% filter(new_class %in% input$report)
+      mutations_subset <- mutations() %>% filter(primary_class %in% input$report)
       
       # filter out variants with missing allele count
       if (input$var_with_mac) {

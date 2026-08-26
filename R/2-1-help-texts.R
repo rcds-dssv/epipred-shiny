@@ -1,41 +1,91 @@
 # This script saves the help texts used throughout the Shiny app
 
 # Edit this text to change what's displayed in the help portion of the landing page
+# Reformatted for readability (post-delivery enhancement, see TODO.md) --
+# same facts/wording as before, just restructured into scannable sections
+# with bold/italic emphasis, bullet lists, and a few icons instead of one
+# long run of plain paragraphs. Tab names below match the actual nav
+# panel labels ("Check My Variant" / "For Researchers") rather than the
+# original text's quoted lowercase versions, for consistency with the UI.
 home_text <- HTML(
   "
-  <h5><div>
+  <div>
+
   <p>
-    The Epilepsy Multiplatform Variant Prediction (EpiMVP) project is an NIH-sponsored Center Without Walls (CWOW) which aims to develop a modular, highly integrated platform to resolve variants of uncertain significance (VUS) in a subset of genes implicated in the rare pediatric epilepsies.
+    🧬 The <strong>Epilepsy Multiplatform Variant Prediction (EpiMVP)</strong> project is an NIH-sponsored Center Without Walls (CWOW) which aims to develop a modular, highly integrated platform to resolve <strong>variants of uncertain significance (VUS)</strong> in a subset of genes implicated in the rare pediatric epilepsies.
   </p>
-    
+
   <p>
-    The Gene Variant and Curation Core (GVCC) integrates data from clinical genetic data and functional readouts from EpiMVP and utilizes the power of machine learning to create a computational tool called EpiPred. EpiPred is currently only available for the gene STXBP1 but will be expanded to other epilepsy-related genes soon. 
+    🔬 The <strong>Gene Variant and Curation Core (GVCC)</strong> integrates data from clinical genetic data and functional readouts from EpiMVP and utilizes the power of machine learning to create a computational tool called <strong>EpiPred</strong>. We focus on five genes most implicated in epilepsy that are <em>not</em> ion channels or receptors (which tend to be more well-studied already):
   </p>
-    
+  <ul>
+    <li><strong>STXBP1</strong></li>
+    <li><strong>SLC6A1</strong></li>
+    <li><strong>PCDH19</strong></li>
+    <li><strong>SYNGAP1</strong></li>
+    <li><strong>CHD2</strong></li>
+  </ul>
+
   <p>
-    In the ‘Check my Variant’ tab you can query individual missense variants that you may have obtained as part of a clinical or research-based genetic test. Once you enter in a variant, the EpiPred prediction, i.e. more likely pathogenic or benign, will be returned.
+    📋 All variants identified in clinical genetic testing are classified by the <strong>American College of Medical Genetics (ACMG)</strong> classification criteria. Variants fall primarily into three groups:
   </p>
-  
+  <ul>
+    <li><strong>PLP</strong> &mdash; pathogenic or likely pathogenic</li>
+    <li><strong>BLB</strong> &mdash; benign or likely benign</li>
+    <li><strong>VUS</strong> &mdash; variant of uncertain significance</li>
+  </ul>
   <p>
-    In the ‘For researchers’ tab we have calculated EpiPred scores for all possible missense variants in STXBP1 and provide these scores in comparison to a variety of other variant effect predictors and STXBP1 features.
+    Below, for each gene, we show the distribution of <strong>missense variants only</strong> &mdash; i.e. those variants which switch one amino acid for another.
   </p>
-  
-  <p>  
-    The manuscript detailing this work is available here and all code is freely available at the Carvill Lab Github.
-  </p>
-  
+
+  <h5>What&rsquo;s in this app</h5>
+  <ul>
+    <li>🔎 <strong>Check My Variant</strong> &mdash; query individual missense variants that you may have obtained as part of a clinical or research-based genetic test, for any of the five genes above. Once you enter in a variant, the EpiPred prediction, i.e. more likely pathogenic or benign, will be returned.</li>
+    <li>📊 <strong>For Researchers</strong> &mdash; we have calculated EpiPred scores for all possible missense variants in each of these five genes and provide these scores in comparison to a variety of other variant effect predictors and gene-specific features.</li>
+  </ul>
+
+  <h5>Learn more</h5>
   <p>
-    This study was sponsored by the NIH EpiMVP CWOW NINDS U54 NS117170
+    📄 The manuscript detailing this work is available <strong>here</strong> and all code is freely available at the <strong>Carvill Lab Github</strong>.
   </p>
-  
   <p>
-    <small><small>
-      Disclaimer: The information on this website is not intended for direct genetic and clinical diagnostic use or medical decision-making. We recommend review of any information provided by this website with a genetics professional. Individuals should not change their health behavior on the basis of information contained on this website. Access to general information is provided for educational purposes only. You are liable or responsible for any advice, course of treatment, diagnosis or any other information, services or product obtained through this site.
-    </small></small>
+    🏛️ This study was sponsored by the NIH EpiMVP CWOW <strong>NINDS U54 NS117170</strong>.
   </p>
-  
+
+  <div style='margin-top:16px; padding:10px 14px; background-color:#f1f1f1; border-left:4px solid #999; border-radius:4px;'>
+    <small>
+      ⚠️ <strong>Disclaimer:</strong> <em>The information on this website is not intended for direct genetic and clinical diagnostic use or medical decision-making. We recommend review of any information provided by this website with a genetics professional. Individuals should not change their health behavior on the basis of information contained on this website. Access to general information is provided for educational purposes only. You are liable or responsible for any advice, course of treatment, diagnosis or any other information, services or product obtained through this site.</em>
+    </small>
   </div>
-  </h5>"
+
+  </div>"
+)
+
+# Static legend explaining the ACMG classes shown in the landing-page
+# waffle plot (TODO.md Phase 2). Exact wording from
+# Researcher_asks/V2 landing page.docx -- "the text in the text box will
+# be static and apply to all genes, it's just an explanation of the data".
+landing_legend_text <- HTML(
+  "
+  <div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center;'>
+    <div style='flex:1; min-width:200px;'>
+      <strong>VUS = variant of uncertain significance</strong>
+      <p>Variant where there is insufficient evidence to determine whether a variant is pathogenic or benign.</p>
+    </div>
+    <div style='flex:1; min-width:200px;'>
+      <strong>Conflicting</strong>
+      <p>Variant has conflicting information in ClinVar, where genetic testing companies disagree on what class the variant should fall into.</p>
+    </div>
+    <div style='flex:1; min-width:200px;'>
+      <strong>BLB = Benign or likely benign</strong>
+      <p>Variant unlikely to be associated with epilepsy.</p>
+    </div>
+    <div style='flex:1; min-width:200px;'>
+      <strong>PLP = pathogenic or likely pathogenic</strong>
+      <p>Variant is likely causative of the epilepsy and/or related neurodevelopmental disorder.</p>
+    </div>
+  </div>
+  "
 )
 
 # Edit this to change the help text in the "For Patients" tab

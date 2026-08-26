@@ -1,10 +1,3 @@
-# The idea of epi_class_background_panel, plot_epi_raw_v_aa_pos,
-# plot_epi_raw_boxplot, plot_epi_raw_violinplot, and plot_epi_raw
-# was to plot the distribution of the EpiPred Score over the Amino Acid 
-# positions, and then plot the individual's variant score on top of it.
-# this plot is not used anymore as it might not give much useful information
-# to the user. 
-# to see the visualization result, try running plot_epi_raw("p.A2P", mutations)
 
 epi_class_background_panel <- function(n, seq_from = -0.05, seq_to = 1.05, stack_vertical = TRUE) {
   
@@ -47,220 +40,96 @@ epi_class_background_panel <- function(n, seq_from = -0.05, seq_to = 1.05, stack
   return(background_geom)
 }
 
-plot_epi_raw_v_aa_pos <- function(
-    var_id,
-    mutations
-  ) {
-  # plot the raw EpiPred score vs amino acid position, given variant ID
-  mutations_selected <- mutations %>%
-    filter(One_letter_Amino_Acid_change == var_id)
-  
-  ggplot(mutations) + 
-    # background layer to color based on epipred score
-    epi_class_background_panel(3) +
-    # add single variant ad the score
-    geom_point(aes(x = AA_POS, y = Prob_PLP), color = "#333333") +
-    geom_point(
-      aes(x = AA_POS, y = Prob_PLP),
-      data = mutations_selected,
-      color = "black", fill = "red", shape = 23, size = 3.5
-    ) + 
-    scale_y_continuous(
-      limits = c(0,1),
-      # comment this part out, and put it in the boxplot
-      # sec.axis = sec_axis(
-      #   transform = ~ .,
-      #   breaks = c(0.125, 0.375, 0.625, 0.875),
-      #   labels = c("Lkely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic"))
-      ) +
-    geom_hline(
-      yintercept = mutations_selected$EpiPred_Raw_Score,
-      color = "red",
-      linetype = "dashed",
-      linewidth = 0.7
-    ) +
-    theme_bw() +
-    theme(
-      axis.text.y.right = element_text(angle = -90, hjust = 0.5),
-      axis.ticks.y.right = element_blank()
-    ) +
-    xlab("Amino Acid Position") +
-    ylab("EpiPred Score") +
-    ggtitle("EpiPred Score vs Amino Acid Position")
-}
-
-plot_epi_raw_boxplot <- function(
-    var_id,
-    mutations
-  ) {
-  # a function to plot a boxplot of epi pred raw score,
-  # and plot an individual's variant score on the boxplot
-  
-  n_class_ <- length(epipred_class_)
-  position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
-  break_pos <- (position_seq[1:(length(position_seq)-1)] + position_seq[2:length(position_seq)]) / 2
-  
-  # plot the raw EpiPred score vs amino acid position, given variant ID
-  mutations_selected <- mutations %>%
-    filter(One_letter_Amino_Acid_change == var_id)
-  
-  ggplot(mutations) + 
-    # background layer to color based on epipred score
-    epi_class_background_panel(n_class) +
-    # boxplot and individual variant score
-    geom_boxplot(aes(x = 1, y = Prob_PLP)) +
-    geom_point(
-      aes(x = 1, y = Prob_PLP),
-      data = mutations_selected,
-      color = "black", fill = "red", shape = 23, size = 3.5
-    ) + 
-    scale_y_continuous(
-      limits = c(0,1),
-      sec.axis = sec_axis(
-        transform = ~ .,
-        breaks = break_pos,
-        labels = epipred_class_)
-    ) + 
-    geom_hline(
-      yintercept = mutations_selected$Prob_PLP,
-      color = "red",
-      linetype = "dashed",
-      linewidth = 0.7
-    ) +
-    theme_bw() +
-    theme(
-      axis.text = element_blank(),
-      axis.ticks = element_blank(),
-      axis.title = element_blank(),
-      axis.text.y.right = element_text(angle = -90, hjust = 0.5),
-      axis.ticks.y.right = element_blank()
-    )
-}
-
-plot_epi_raw_violinplot <- function(var_id, mutations) {
-  # a function to plot a violin plot of epi pred raw score,
-  # and plot an individual's variant score on the boxplot
-  
-  # plot the raw EpiPred score vs amino acid position, given variant ID
-  mutations_selected <- mutations %>%
-    filter(One_letter_Amino_Acid_change == var_id)
-  
-  ggplot(mutations) + 
-    # background layer to color based on epipred score
-    epi_class_background_panel(3) +
-    # boxplot and individual variant score
-    geom_violin(aes(x = 1, y = Prob_PLP), alpha = 0.3, width = 0.5) +
-    geom_boxplot(aes(x = 1, y = Prob_PLP), width = 0.05, fill = "white", color = "black") +
-    geom_hline(
-      yintercept = mutations_selected$Prob_PLP,
-      color = "red",
-      linetype = "dashed",
-      linewidth = 0.7
-    ) + 
-    scale_y_continuous(
-      limits = c(0,1),
-      sec.axis = sec_axis(
-        transform = ~ .,
-        breaks = c(0.125, 0.375, 0.625, 0.875),
-        labels = c("Lkely\nBenign", "Possibly\nBenign", "Possibly\nPathogenic", "Likely\nPathogenic"))
-    ) +
-    coord_cartesian(xlim = c(0.65,1.35), expand = FALSE) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      axis.title = element_blank(),
-      axis.text.y.right = element_text(angle = -90, hjust = 0.5),
-      axis.ticks.y.right = element_blank(),
-      panel.grid = element_blank()
-    )
-}
-
-plot_epi_raw <- function(var_id, mutations) {
-  # combine the scatterplot and the boxplot together
-  g_scatter <- plot_epi_raw_v_aa_pos(var_id, mutations)
-  g_boxplot <- plot_epi_raw_boxplot(var_id, mutations)
-  
-  ggarrange(g_scatter, g_boxplot, ncol = 2, widths = c(4, 1), align = "h")
-}
-
 # We created simpler visualizations to show the distribution of the scores
 
-# plot distribution of EpiPred Scores as barplot
-# x is the prediction category
-# mutations: mutation dataset
-# epi_dist_summary: distribution summary output from epi_dist_summary() function
-# all_classes: all classes of the prediction. The name of the vector is the class name
-#   the value of the vector is what's displayed in the plot
-# predicted_class: predicted class of a chosen variant to highlight. This is optional
-plot_epi_distr_barplot <- function(
-    mutations, epi_dist_summary, all_classes, class_labels = NULL, predicted_class = NULL,
-    alpha.lower = 0.7
-) {
-  
-  if (is.null(class_labels)) {
-    class_labels <- all_classes
-  }
-  
-  n_class_ <- length(all_classes)
-  position_seq <- seq(from = 0, to = 1, length.out = n_class_ + 1)
-  break_pos <- (position_seq[1:(length(position_seq)-1)] + position_seq[2:length(position_seq)]) / 2
-  
-  class_prop_df <- data.frame(
-    class = factor(
-      all_classes,
-      levels = all_classes
-    ),
-    x = break_pos,
-    proportions = epi_dist_summary$class_proportions
+# Pure helper (no ggplot dependency, so it's directly unit-testable) that
+# figures out where the per-variant arrow annotation below should point:
+# the horizontal midpoint of the histogram bin containing `score`, and the
+# (stacked) bar height in that bin, so the arrow always lands just above
+# the bar regardless of how many variants land in that bin.
+compute_score_bin_height <- function(all_scores, score, n_bins = 30, range_min = 0, range_max = 1) {
+  breaks <- seq(range_min, range_max, length.out = n_bins + 1)
+
+  # Use cut() for BOTH the score's own bin and every other score's bin, so
+  # they use the exact same (right-closed, i.e. (a,b]) interval convention
+  # as each other -- mixing this with findInterval()'s left-closed
+  # convention would occasionally look up the wrong bin's count whenever a
+  # score lands exactly on a bin edge (e.g. Prob_PLP == 0.5 with 10 bins).
+  all_bins <- cut(c(all_scores, score), breaks = breaks, include.lowest = TRUE)
+  score_bin <- utils::tail(all_bins, 1)
+  bin_idx <- as.integer(score_bin)
+
+  bin_mid <- mean(breaks[c(bin_idx, bin_idx + 1)])
+
+  bin_counts <- table(cut(all_scores, breaks = breaks, include.lowest = TRUE))
+  bar_height <- suppressWarnings(as.numeric(bin_counts[bin_idx]))
+  if (is.na(bar_height)) bar_height <- 0
+
+  list(
+    bin_mid = bin_mid,
+    bar_height = bar_height,
+    arrow_gap = max(bar_height, 1) * 0.05,
+    arrow_length = max(bar_height, 1) * 0.3
   )
-  
-  # control color aesthetic to highlight selected class
-  if (!is.null(predicted_class)) {
-    class_prop_df$highlight <- class_prop_df$class == predicted_class
-    colormap <- c("#000000", "#00000000")
-    names(colormap) <- c(TRUE, FALSE)
-  } else {
-    class_prop_df$highlight <- TRUE
-    colormap <- c("TRUE" = "#00000000")
+}
+
+# Distribution of Prob_PLP stacked by ACMG class (TODO.md Phase 3),
+# replacing the old class-proportion barplot above. Ported from
+# Researcher_asks/code_for_plots/website_EpiPred_distribution_by_class.R,
+# using `mutations` (the harmonized per-gene data already loaded for this
+# tab) directly rather than a separate per-gene file, so the distribution
+# shown here always matches the variant classification used elsewhere on
+# this tab (colorbar, gnomAD lookup) for all 5 genes.
+#
+# `predicted_score`, if supplied, adds a downward-pointing arrow above the
+# bin containing the current variant's own score -- new relative to the
+# provided script, which only draws the two fixed threshold lines.
+plot_epi_distr_class_histogram <- function(
+    mutations, predicted_score = NULL,
+    ambiguous_range = c(0.1, 0.9), n_bins = 30
+) {
+  # exclude simulated variants and any missing/blank class value, same as
+  # the researcher's own script does (there, via Primary_class != "sim")
+  mutations_filtered <- mutations %>%
+    filter(primary_class %in% c("VUS", "BLB", "PLP", "conflict")) %>%
+    mutate(primary_class = droplevels(primary_class))
+
+  # explicit breaks (rather than bins + boundary, which ggplot2 would size
+  # to the data's own observed range) so the rendered bars always land on
+  # the exact same edges compute_score_bin_height() uses for the arrow
+  breaks <- seq(0, 1, length.out = n_bins + 1)
+
+  g <- ggplot(mutations_filtered, aes(x = Prob_PLP, fill = primary_class)) +
+    geom_histogram(breaks = breaks, color = "white", position = "stack") +
+    geom_vline(
+      xintercept = ambiguous_range,
+      color = c("#74B347", "#5523AA"),
+      linetype = "dashed",
+      linewidth = 1
+    ) +
+    scale_fill_manual(values = epipred_class_colors_, name = "Primary Class") +
+    theme_classic(base_size = 14) +
+    labs(
+      x = "Prob_PLP",
+      y = "Variant Count",
+      title = "Distribution of Predicted Pathogenicity by Variant Class"
+    ) +
+    theme(plot.title = element_text(size = 14))
+
+  if (!is.null(predicted_score) && !is.na(predicted_score)) {
+    bin_info <- compute_score_bin_height(mutations_filtered$Prob_PLP, predicted_score, n_bins = n_bins)
+    g <- g +
+      annotate(
+        "segment",
+        x = bin_info$bin_mid, xend = bin_info$bin_mid,
+        y = bin_info$bar_height + bin_info$arrow_gap + bin_info$arrow_length,
+        yend = bin_info$bar_height + bin_info$arrow_gap,
+        arrow = arrow(length = unit(0.12, "inches"), type = "closed"),
+        linewidth = 1, color = "black"
+      )
   }
-  
-  # control alpha aesthetic to highlight selected class
-  if (!is.null(predicted_class)) {
-    alphamap <- c(1, alpha.lower)
-    names(alphamap) <- c(TRUE, FALSE)
-  } else {
-    alphamap <- c("TRUE" = 1)
-  }
-  
-  # define filling scheme for bars
-  fillmap <- epipred_score_color_ramp(c(0, 0.5, 1))
-  names(fillmap) <- all_classes
-  
-  ggplot(class_prop_df) + 
-    geom_col(
-      aes(x = x, y = proportions, fill = class, color = highlight, alpha = highlight),
-      show.legend = FALSE, linejoin = "mitre", size = 1.5
-    ) +
-    scale_fill_manual(values = fillmap) +
-    scale_color_manual(values = colormap) +
-    scale_alpha_manual(values = alphamap) +
-    scale_x_continuous(
-      breaks = break_pos,
-      labels = class_labels
-    ) +
-    scale_y_continuous(labels = scales::percent) +
-    xlab("Predicted Class") +
-    ylab("Proportion of Variants") +
-    theme_bw() +
-    theme(
-      axis.text.y.right = element_text(angle = -90, hjust = 0.5),
-      axis.ticks.y.right = element_blank(),
-      axis.title.x = element_text(vjust = -0.5),
-      axis.title = element_text(size = 15)
-    ) +
-    ggtitle("Distribution of EpiPred Scores")
-  
+
+  return(g)
 }
 
 plot_epi_distr_boxplot <- function(
