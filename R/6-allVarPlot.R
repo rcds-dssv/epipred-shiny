@@ -65,7 +65,14 @@ marginal_plot <- function(
     geom_point(aes(x = .data[[var1]], y = .data[[var2]], color = color_group)) +
     scale_discrete_manual(aesthetics = "color", values = colormap) +
     theme_bw() +
-    theme(legend.position = "bottom")
+    theme(
+      legend.position = "bottom",
+      axis.title = element_text(size = 20),  
+      axis.text = element_text(size = 15),    
+      legend.title = element_text(size = 15),
+      legend.text = element_text(size = 15),
+      plot.title = element_text(size = 18)    
+    )
   
   # if variants are highlighted in the displayed dataframe in the shiny app
   # highlight those variants in the plot
