@@ -67,7 +67,6 @@ display_epipred_score <- function(
     # shows the direction of the classification
     
     arrow_x_gap_from_end <- 0.015 # gap from end of bar to the arrow (both left and right)
-    # arrow_x_gap_from_center <- 0.18 # unused
     left_arrow_start <- ambiguous_range[1]
     right_arrow_start <- ambiguous_range[2]
     
@@ -118,7 +117,6 @@ display_epipred_score <- function(
   return(g)
 }
 
-## Approach 1: Gradient with many segments
 # create a colorbar and draw many segments to give the illusion of a gradient
 create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_color = "#4E2A84",
                              middle_color = "grey", outline_width = 1, bar_height = 1,
@@ -155,61 +153,6 @@ create_epipred_colorbar <- function(nbars = 1000, left_color = "#74B347", right_
   return(g)
 }
 
-## Approach 2: create a second type of colorbar where colors are based on the 
-# epipred prediction class - minimalistic look
-create_epipred_colorbar2 <- function(
-    bar_height = 1,
-    epi_dist_summary = NULL, distribution_type = "proportion", 
-    outline_width = 1, void = TRUE) {
-  
-  epi_colors <- epipred_score_color_ramp(c(0, 0.3, 0.7, 1))
-  names(epi_colors) <- epi_colors
-  
-  outline_data <- create_outline_data(bar_height)
-  
-  rect_data <- data.frame(
-    xmin = c(0, 0.25, 0.5, 0.75),
-    xmax = c(0.25, 0.5, 0.75, 1),
-    ymin = rep(-bar_height / 2, 4),
-    ymax = rep(bar_height / 2, 4),
-    color = epi_colors
-  )
-  
-  g <- ggplot(rect_data) +
-    geom_rect(aes(
-      xmin = xmin, xmax = xmax,
-      ymin = ymin, ymax = ymax,
-      fill = color),
-      show.legend = FALSE, alpha = 0.8) +
-    scale_fill_manual(values = epi_colors) +
-    annotate(
-      geom = "text", x = c(0-0.03, 1 + 0.03), y = 0,
-      label = c("0","1"), fontface = "bold", size = 6
-    ) +
-    # add outline
-    geom_path(
-      data = outline_data,
-      aes(x = y, y = x),
-      linewidth = outline_width,
-      linejoin = "mitre"
-    )
-    
-
-  if (void) {
-    # remove all graphical elements except the bar
-    g <- g + theme_void()
-  }
-  
-  if (!is.null(epi_dist_summary)) {
-    g <- overlay_epi_distribution(
-      g, epi_dist_summary = epi_dist_summary, distribution_type = distribution_type,
-      size = 10, padding = 0.05
-    )
-  }
-  
-  return(g)
-}
-
 # create data frame of n equally spaced bars
 create_bardata <- function(n, bar_height, gradient_transform_function) {
   df_out <- data.frame(
@@ -230,86 +173,3 @@ create_outline_data <- function(bar_width) {
     y = c(0,0,1,1,0,0)
   )
 }
-
-# draw distribution (either proportion or density) on top of the colorbar
-overlay_epi_distribution <- function(
-  g, epi_dist_summary, distribution_type = "proportion", 
-  size = 10, padding = 0.05
-) {
-  
-  if (distribution_type == "proportion") {
-    
-    epi_dist_summary$class_proportions <- epi_dist_summary$class_proportions %>%
-      `*`(100) %>%
-      round(0) %>%
-      format(nsmall = 0, scientific = FALSE) %>%
-      paste0("%") %>%
-      setNames(c("Likely benign", "Possibly benign", "Possibly pathogenic", "Likely pathogenic"))
-    
-    
-    class_prop_table <- data.frame(
-      x = c(0, 0.25, 0.5, 0.75) + 0.125,
-      y = 0,
-      prop = epi_dist_summary$class_proportions
-    )
-    
-    g <- g + 
-      geom_text(data = class_prop_table, aes(x = x, y = y, label = prop), size = 10)
-
-  } else if (distribution_type == "density") {
-    
-    density_table <- data.frame(
-      x = epi_dist_summary$density$x,
-      y = epi_dist_summary$density$y
-    ) %>%
-      mutate(
-        y = (y - min(y)),
-        y = y / max(y) * (1 - padding*2) - (0.5 - padding)
-      )
-    
-    g <- g + 
-      geom_line(data = density_table, aes(x = x, y = y), linewidth = 1)
-    
-  }
-  
-  return(g)
-}
-
-
-# revisit if current solution not performant
-## What if we try to use the bar image as background and plot on top?
-# library(cowplot)
-# library(magick)
-# try saving image of the bar for a different approach
-# g <- create_epipred_colorbar(
-#   nbars = 100000, left_color = "#74B347", right_color = "#4E2A84",
-#   middle_color = "grey", bar_width = 0.5, outline_width = 1
-# )
-# ggsave("tmp.png", g, device = "png", scale = 1, width = 5, height = 1, dpi = 1000)
-
-# ## Attempt 1: with png::readPNG and annotation_custom
-# img <- png::readPNG("tmp.png") # object too big
-# background_bar <- rasterGrob(img, interpolate=TRUE)
-# 
-# g <- ggplot() +
-#   coord_cartesian(xlim = c(-0.2, 1.2), ylim = c(-0.2,1.2)) +
-#   theme_void() +
-#   annotation_custom(background_bar, xmin = 0, xmax = 1, ymin = 0, ymax = 1)
-# 
-## Attempt 2: with cowplot
-# create_epipred_colorbar2 <- function(background_img = "tmp.png") {
-#   # image of a bar
-#   img <- image_read(background_img)
-#   
-#   # create empty plot 
-#   g <- ggplot() +
-#     coord_cartesian(xlim = c(0,1), ylim = c(-1,1)) +
-#     theme_void()
-#   
-#   # draw image on top of g
-#   g2 <- ggdraw() +
-#     draw_image(background_img) +
-#     draw_plot(g, width = 1, height = 4)
-#   
-#   return(g2)
-# }

@@ -10,42 +10,80 @@ library(ggpubr)
 library(ggExtra)
 library(bsicons)
 library(forcats)
-library(plotly) # For Researchers heatmap interactivity (hover tooltips) -- see R/8-heatmapPlot.R
+library(plotly) 
 
-# column names of the harmonized per-gene data (see R/0-data-prep.R and
-# TODO.md Phase 0) -- these replace the original STXBP1-only column names
-# now that every gene's data goes through the same harmonization step.
+# column names the app uses for every gene's data. Each gene's raw EpiPred
+# output file is renamed to these on load (column_rename_map_ below,
+# applied in clean_mutations() in R/3-utils.R); any column a gene's file
+# doesn't have comes through as NA.
 mutations_colnames_ <- c(
-  "gene", "variant_id", "three_letter_change", "chrom", "pos", "genome_build", 
-  "ref", "alt", "variant_key", "AA_POS", "AA_REF", "AA_ALT", 
-  "BayesDel_noAF_score", "RSA", "am_pathogenicity", "ClinPred_score", 
-  "REVEL_score", "VARITY_R_score", "VEST4_score", "gMVP_score", "Prob_PLP", 
-  "Prob_BLB", "gnomAD_AlleleCount", "gnomAD_AlleleNumber", 
-  "gnomAD_ancestry_group", "gnomAD_ancestry_freq", 
-  "has_full_allele_info", "primary_class", "epipred_band", "pdb_file", 
+  "gene", "variant_id", "three_letter_change", "chrom", "pos", "genome_build",
+  "ref", "alt", "variant_key", "AA_POS", "AA_REF", "AA_ALT",
+  "BayesDel_addAF_score", "RSA", "am_pathogenicity", "ClinPred_score",
+  "REVEL_score", "VARITY_R_score", "VEST4_score", "gMVP_score", "Prob_PLP",
+  "Prob_BLB", "gnomAD_AlleleCount", "gnomAD_AlleleNumber",
+  "gnomAD_ancestry_group", "gnomAD_ancestry_freq",
+  "primary_class", "epipred_band", "pdb_file",
   "pdb_chain", "pdb_res_pos", "aa_pos_structure"
 )
 
 # show available genes
-# NOTE: PCDH19 is included here since the data-harmonization step (Q1b in
-# R/0-data-prep.R) already resolved its residue-numbering concern and its
-# harmonized file exists like the other four -- but the project docs'
-# bullet text still only lists 4 genes for Check My Variant / For
-# Researchers (see TODO.md open question Q1). Remove "PCDH19" below if the
-# researcher confirms it should be excluded from those two tabs.
 genes_avail_ <- c("STXBP1", "CHD2", "PCDH19", "SLC6A1", "SYNGAP1")
 
-# list mapping from gene to file
-# the name of list is the gene name, and the value is the path to the
-# harmonized data (R/0-data-prep.R output) -- every gene, including
-# STXBP1, now reads from data/harmonized/ so the whole app works against
-# one consistent column schema instead of STXBP1's original raw layout.
+# list mapping from gene to its EpiPred output file
 genes_file_map_ <- list(
-  "STXBP1"  = "data/harmonized/STXBP1_harmonized.csv",
-  "CHD2"    = "data/harmonized/CHD2_harmonized.csv",
-  "PCDH19"  = "data/harmonized/PCDH19_harmonized.csv",
-  "SLC6A1"  = "data/harmonized/SLC6A1_harmonized.csv",
-  "SYNGAP1" = "data/harmonized/SYNGAP1_harmonized.csv"
+  "STXBP1"  = "data/epipred_output_files/STXBP1_epipredWebsite_output_v2.csv",
+  "CHD2"    = "data/epipred_output_files/CHD2_epipredWebsite_output_v2.csv",
+  "PCDH19"  = "data/epipred_output_files/PCDH19_epipredWebsite_output_v2.csv",
+  "SLC6A1"  = "data/epipred_output_files/SLC6A1_epipredWebsite_output_v2.csv",
+  "SYNGAP1" = "data/epipred_output_files/SYNGAP1_epipredWebsite_output_v2.csv"
+)
+
+# Raw -> app column renames per gene, as c(app_name = "raw_name"). Only
+# columns whose raw name differs from mutations_colnames_ are listed.
+# Columns are matched by name, and a missing raw column errors on load.
+# PCDH19, SLC6A1 and SYNGAP1 share one layout.
+rename_pcdh19_slc6a1_syngap1 <- c(
+  variant_id          = "hgvs_pro",
+  three_letter_change = "hgvs_pro_3letter",
+  variant_key         = "hg19_key",
+  pos                 = "pos_hg19",
+  gnomAD_AlleleCount  = "gnomAD4.1_joint_AC",
+  primary_class       = "Primary_class",
+  pdb_file            = "PDB_FILE",
+  pdb_chain           = "CHAIN",
+  pdb_res_pos         = "RES_POS"
+)
+column_rename_map_ <- list(
+  "STXBP1" = c(
+    variant_id            = "One_letter_Amino_Acid_change",
+    three_letter_change   = "Three_letter_Amino_Acid_change",
+    variant_key           = "hg38_uniq_ID",
+    chrom                 = "chrom.x",
+    pos                   = "pos_hg38.x",
+    ref                   = "ref.x",
+    alt                   = "alt.x",
+    gnomAD_ancestry_group = "GroupMax.FAF.group",
+    gnomAD_ancestry_freq  = "GroupMax.FAF.frequency",
+    primary_class         = "new_class"
+  ),
+  "CHD2" = c(
+    variant_id         = "hgvs_pro_1letter",
+    variant_key        = "hg19_key",
+    pos                = "pos_hg19",
+    gnomAD_AlleleCount = "gnomAD4.1_joint_AC",
+    primary_class      = "Primary_class"
+  ),
+  "PCDH19"  = rename_pcdh19_slc6a1_syngap1,
+  "SLC6A1"  = rename_pcdh19_slc6a1_syngap1,
+  "SYNGAP1" = rename_pcdh19_slc6a1_syngap1
+)
+
+# genome build of each gene's variant_key / pos. gnomAD v4 links are only
+# built for hg38 data (see extract_variant_id() in R/3-utils.R)
+genome_build_map_ <- list(
+  "STXBP1" = "hg38", "CHD2" = "hg19", "PCDH19" = "hg19",
+  "SLC6A1" = "hg19", "SYNGAP1" = "hg19"
 )
 
 # default value to show for selecting Amino Acid ID
@@ -57,102 +95,38 @@ aa_id_default_ <- "A2V"
 var_id_search_url_ <- "https://docs.google.com/presentation/d/1VIn24tBOnbThHt147XGp9QWZYopRdBVoTVCEybnjGXY"
 
 # used for checkboxgroupinput in all var module
-# Matches the real primary_class values found in the harmonized data
-# (verified directly against all 5 genes' files while building
-# R/0-data-prep.R) -- note this replaces the old made-up "Simulation"
-# (capital S) with "simulation" (lowercase, as the data actually has it)
-# and adds "conflict", which didn't exist in STXBP1's original data alone.
+# Matches the primary_class values in the data. STXBP1's new_class spells
+# simulation with a capital S; clean_mutations() lowercases it to match.
 report_source_ <- c("VUS", "BLB", "PLP", "conflict", "simulation")
 
-# pdb file for 3d representation of protein
-# PCDH19/SLC6A1/SYNGAP1's *real* filenames come from their harmonized
-# data's pdb_file column (confirmed constant per gene while building
-# R/0-data-prep.R): AF-Q8TAB3-2-F1-model_v6.pdb / AF-P30531-F1-model_v6.pdb
-# / AF-Q96PV0-4-F1-model_v6.pdb respectively. None of those three files
-# have actually been delivered yet, and CHD2 never had a real filename
-# supplied at all.
-#
-# Post-delivery enhancement (see TODO.md "Post-delivery enhancements"):
-# rather than leave those 4 genes' 3D viewers permanently showing "not yet
-# available" in the meantime, one dummy/placeholder .pdb file per gene was
-# supplied (data/pdb/<GENE>.pdb) purely so the viewer has something to
-# render -- these are NOT the genes' real protein structures (some are
-# literally identical files reused across genes), so residue highlighting
-# on these 4 won't correspond to anything biologically meaningful; they're
-# a rendering placeholder only. STXBP1 keeps its real, already-delivered
-# AlphaFold structure.
-#
-# TODO: swap each placeholder path below for the real file the moment
-# it's delivered -- for PCDH19/SLC6A1/SYNGAP1 that's almost certainly the
-# AF-...-model_v6.pdb filename already named above (what the harmonized
-# data's pdb_file column expects); for CHD2, whatever filename its real
-# structure ships under. The app checks file.exists() at runtime (see
-# SingleVarServer's pdb_available reactive) and hides the 3D viewer
-# gracefully instead of crashing if a path here is ever missing again.
+# pdb file for 3d representation of protein (AlphaFold models). PCDH19's
+# model is isoform 2, so its residue numbers differ from AA_POS -- see
+# aa_pos_structure in clean_mutations().
 pdbfile_map_ <- list(
-  "STXBP1"  = "data/pdb/STXBP1.pdb",                # placeholder -- verify if real structure
-  "CHD2"    = "data/pdb/CHD2.pdb",                  # placeholder -- not the real structure
-  "PCDH19"  = "data/pdb/PCDH19.pdb",                # placeholder -- not the real structure
-  "SLC6A1"  = "data/pdb/SLC6A1.pdb",                # placeholder -- not the real structure
-  "SYNGAP1" = "data/pdb/SYNGAP1.pdb"                # placeholder -- not the real structure
+  "STXBP1"  = "data/protein_structure_files/STXBP1_pdb/AF-P61764-F1-model_v4_STXBP1.pdb",
+  "CHD2"    = "data/protein_structure_files/CHD2_pdb/AF-O14647-F1-model_v6.pdb",
+  "PCDH19"  = "data/protein_structure_files/PCDH19_pdb/AF-Q8TAB3-2-F1-model_v6.pdb",
+  "SLC6A1"  = "data/protein_structure_files/SLC6A1_pdb/AF-P30531-F1-model_v6.pdb",
+  "SYNGAP1" = "data/protein_structure_files/SYNGAP1_pdb/AF-Q96PV0-4-F1-model_v6.pdb"
 )
 
-# Ambiguous range for the EpiPred Colorbar
-# These MUST match ambiguous_range_provisional in R/0-data-prep.R, since
-# that script pre-computes each gene's epipred_band column using these
-# exact cutoffs -- if the two drift apart, the live colorbar's shading and
-# the harmonized data's own classification will visibly disagree. STXBP1
-# keeps its existing (narrower) cutoff; the other four use the 0.1/0.9
-# lines shown in the Check_my_variant.docx mockup. This is still flagged
-# as provisional / open in TODO.md (Q2) -- update both files together if
-# the researcher confirms a different answer.
+# Ambiguous range for the EpiPred Colorbar, also used to compute each
+# variant's epipred_band in clean_mutations(): Prob_PLP <= lower is BLB,
+# >= upper is PLP, anything in between is ambiguous.
 ambiguous_range_list_ <- list(
-  "STXBP1"  = c(0.625179, 0.8711709),
-  "CHD2"    = c(0.1, 0.9),
-  "PCDH19"  = c(0.1, 0.9),
-  "SLC6A1"  = c(0.1, 0.9),
-  "SYNGAP1" = c(0.1, 0.9)
+  "STXBP1"  = c(0.625179,  0.8711709),
+  "CHD2"    = c(0.1706943, 0.5767736),
+  "PCDH19"  = c(0.3237749, 0.7160636),
+  "SLC6A1"  = c(0.2686419, 0.700472),
+  "SYNGAP1" = c(0.1676314, 0.1766017) # CHECK NARROW GAP
 )
 
-# Per-gene "all class" metadata file used by the landing page's waffle
-# plot (TODO.md Phase 2). Per V2 landing page.docx: "Metadata for all
-# genes will have this structure <gene_all_class_epipred_out.csv> ...
-# will be one for each gene in the folder" -- but only CHD2's has
-# actually been delivered so far. class_waffle_plot() (R/7-landingPlot.R)
-# falls back to the already-harmonized per-variant data (data/harmonized/)
-# for any gene not listed here, so the plot still works for all 5 genes
-# today -- add an entry here the moment a gene's own file shows up, no
-# other code change needed.
-#
-# NOTE: this file's Primary_class breakdown for CHD2 does not exactly
-# match the primary_class breakdown in data/harmonized/CHD2_harmonized.csv
-# (both are the researcher's own data -- flagged as an open question in
-# TODO.md, not a harmonization bug).
-all_class_file_map_ <- list(
-  "CHD2" = "Researcher_asks/data/CHD2_all_class_epipred_out.csv"
-)
-
-# Available variables for marginal plot in "For Researchers" tab
-# (TODO.md Phase 4) -- the 11 columns specified in for_researchers.docx:
-# BayesDel_noAF_score, gnomAD4.1_joint_AC (-> gnomAD_AlleleCount, already
-# renamed by R/0-data-prep.R), am_pathogenicity, RSA, AA_POS,
-# ClinPred_score, REVEL_score, VARITY_R_score, VEST4_score, gMVP_score,
-# Prob_PLP. Dropped "Variant Position" (raw genomic coordinate `pos`,
-# not a VEP/gene feature and not in the doc's list) but kept the derived
-# "Log(Allele Count)" convenience option since it's just a transform of
-# Allele Count, which IS in the list.
-#
-# NOTE: BayesDel_noAF_score, RSA, REVEL_score, VEST4_score, and
-# gMVP_score are 100% NA for STXBP1 (see Q5 in R/0-data-prep.R -- no
-# refreshed STXBP1 file with these columns has been provided). Selecting
-# one of those for STXBP1 doesn't error: AllVarServer's existing
-# missing-value filter drops every row and the plot area shows the
-# existing "N rows with missing values were removed" warning text
-# instead of a chart, which is a reasonable degrade until that data
-# arrives.
+# Available variables for marginal plot in "For Researchers" tab.
+# BayesDel_addAF_score is used because it's the only BayesDel score in
+# all 5 genes' files (BayesDel_noAF_score is CHD2-only).
 scatterplot_vars_ <- c(
   "EpiPred Raw Score" = "Prob_PLP",
-  "BayesDel (no AF) Score" = "BayesDel_noAF_score",
+  "BayesDel (add AF) Score" = "BayesDel_addAF_score",
   "ClinPred Score" = "ClinPred_score",
   "REVEL Score" = "REVEL_score",
   "VARITY R Score" = "VARITY_R_score",
@@ -175,7 +149,7 @@ epipred_class_ <- c(
   "BLB", "ambiguous", "PLP"
 )
 
-# corresponding name to the epipred predictionary categories to be shown in plot
+# corresponding name to the epipred prediction categories to be shown in plot
 epipred_class_labels_ <- c(
   "Benign / \nLikely Benign", "Ambiguous", "Pathogenic / \nLikely Pathogenic"
 )

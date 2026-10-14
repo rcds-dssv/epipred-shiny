@@ -1,12 +1,6 @@
 # This script saves the help texts used throughout the Shiny app
 
 # Edit this text to change what's displayed in the help portion of the landing page
-# Reformatted for readability (post-delivery enhancement, see TODO.md) --
-# same facts/wording as before, just restructured into scannable sections
-# with bold/italic emphasis, bullet lists, and a few icons instead of one
-# long run of plain paragraphs. Tab names below match the actual nav
-# panel labels ("Check My Variant" / "For Researchers") rather than the
-# original text's quoted lowercase versions, for consistency with the UI.
 home_text <- HTML(
   "
   <div>
@@ -62,9 +56,7 @@ home_text <- HTML(
 )
 
 # Static legend explaining the ACMG classes shown in the landing-page
-# waffle plot (TODO.md Phase 2). Exact wording from
-# Researcher_asks/V2 landing page.docx -- "the text in the text box will
-# be static and apply to all genes, it's just an explanation of the data".
+# waffle plot (same for all genes)
 landing_legend_text <- HTML(
   "
   <div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center;'>
@@ -88,7 +80,7 @@ landing_legend_text <- HTML(
   "
 )
 
-# Edit this to change the help text in the "For Patients" tab
+# Edit this to change the help text in the "Check My Variant" tab
 patients_help_text <- HTML(
   "
   <p>

@@ -1,6 +1,16 @@
 # Utility functions
 
-clean_mutations <- function(mutations, warn_duplicates = TRUE) {
+clean_mutations <- function(mutations, gene, warn_duplicates = TRUE) {
+  # rename the raw EpiPred columns to the app's names (column_rename_map_
+  # in R/1-setup.R); all_of() errors if a raw column is missing
+  mutations <- mutations %>%
+    rename(all_of(column_rename_map_[[gene]]))
+
+  # columns this gene's file doesn't have (e.g. Prob_BLB for STXBP1,
+  # pdb_* for STXBP1 and CHD2) come through as NA
+  missing_cols <- setdiff(mutations_colnames_, colnames(mutations))
+  mutations[missing_cols] <- NA
+
   if (warn_duplicates) {
     duplicate_id <- mutations %>%
       count(variant_id) %>%
@@ -12,23 +22,33 @@ clean_mutations <- function(mutations, warn_duplicates = TRUE) {
     }
   }
   
+  ambiguous_range <- ambiguous_range_list_[[gene]]
+
   # clean up the mutations data frame
   mutations <- mutations %>%
     mutate(
-      # matches the real category values in the harmonized data (see
-      # R/0-data-prep.R) -- "conflict" and "simulation" didn't exist in
-      # STXBP1's original new_class column, and "Simulation" is now
-      # lowercase "simulation" to match the other four genes
+      # .env$gene: the function argument, not the data column of that name
+      gene = .env$gene,
+      genome_build = genome_build_map_[[.env$gene]],
+      # residue index in this gene's PDB file (see pdbfile_map_)
+      aa_pos_structure = coalesce(pdb_res_pos, AA_POS),
+      # STXBP1's new_class spells "Simulation" with a capital S; values
+      # outside these levels (e.g. "not provided") become NA
       primary_class = factor(
-        primary_class,
+        if_else(primary_class == "Simulation", "simulation", primary_class),
         levels = c("BLB", "PLP", "VUS", "conflict", "simulation")
       ),
       epipred_band = factor(
-        epipred_band,
+        case_when(
+          Prob_PLP <= ambiguous_range[1] ~ "BLB",
+          Prob_PLP >= ambiguous_range[2] ~ "PLP",
+          !is.na(Prob_PLP) ~ "ambiguous"
+        ),
         levels = c("BLB", "ambiguous", "PLP")
-      ),
-      id = row_number() # id only used for internal row identification
-    )
+      )
+    ) %>%
+    select(all_of(mutations_colnames_)) %>%
+    mutate(id = row_number()) # id only used for internal row identification
   
   return(mutations)
 }
@@ -95,18 +115,9 @@ get_gnomad_maf <- function(mutations, var_id, unique_id = NULL) {
     "variant_key" = epi_score$variant_key
   )
   
-  # has_full_allele_info is already computed once during data harmonization
-  # (R/0-data-prep.R) as exactly !is.na(allele_count) & !is.na(allele_number)
-  # -- reuse it instead of recomputing the same thing here.
-  maf$full_allele_info <- epi_score$has_full_allele_info
+  maf$full_allele_info <- !is.na(maf$allele_count) & !is.na(maf$allele_number)
   
   return(maf)
-}
-
-epipred_score_color_palette <- function(x, left_color = "#74B347", right_color = "#4E2A84", middle_color = "grey") {
-  # take in an integer and return a palette of colors based on a gradient
-  # specified by the left, right, and middle colors
-  return(colorRampPalette(c(left_color, middle_color, right_color))(x))
 }
 
 epipred_score_color_ramp <- function(x, left_color = "#74B347", right_color = "#4E2A84", middle_color = "grey") {
@@ -122,36 +133,8 @@ epipred_score_color_ramp <- function(x, left_color = "#74B347", right_color = "#
   return(color_hex)
 }
 
-get_pos_on_chr <- function(pos_character, to.numeric = TRUE) {
-  # get starting position based on the position column in the 
-  # epiPred output data frame
-  check_pos_format <- str_detect(pos_character, "^.:\\d+-\\d+$")
-  if (!all(check_pos_format)) {
-    warning("Some positions do not match the expected format.")
-  }
-  
-  positions <- str_match(pos_character, "^.:(\\d+)-(\\d+)")
-  positions <- positions[,2:3]
-  
-  if (!all(positions[,1] == positions[,2])) {
-    warning("Starting position is not the same as the ending position for some variants. Using the starting position.")
-  }
-  
-  positions <- positions[,1]
-  
-  if (to.numeric) {
-    positions <- as.numeric(positions)
-  }
-  
-  return(positions)
-}
-
-# Only valid for hg38-format variant keys (e.g. STXBP1's "A2V-9-127612408-C-T").
-# The 4 newer genes' variant_key is hg19-based (hg19_key, a different format
-# entirely -- see TODO.md) and gnomAD v4 is hg38-native, so callers must
-# check genome_build == "hg38" before using this (see SingleVarServer's
-# output$epipred_output_text in R/2-2-modules.R) rather than calling it on
-# hg19 data, which would silently build a link to the wrong variant.
+# Only valid for hg38-format variant keys (e.g. STXBP1's "A2V-9-127612408-C-T"),
+# so callers must check genome_build == "hg38" first.
 extract_variant_id <- function(unique_id) {
   str_extract(unique_id, "^[[:alnum:]]+-([[:alnum:]-]+)$", group = 1)
 }

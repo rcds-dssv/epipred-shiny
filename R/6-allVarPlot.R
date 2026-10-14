@@ -20,15 +20,8 @@ marginal_plot <- function(
   # create color mapping based on chosen group
   if (color_group == "primary_class") {
     
-    # Fixed categorical ACMG palette (TODO.md Phase 4), replacing the old
-    # auto-generated brewer.pal colors. Reuses epipred_class_colors_
-    # (R/7-landingPlot.R) so BLB/VUS/PLP/conflict always get the same
-    # color on this plot as on the Phase 2 waffle plot and the Phase 3
-    # distribution histogram. Neither provided script assigns a color to
-    # "simulation" ("sim = something else in this color palette" per
-    # for_researchers.docx, without naming it) -- "#5DADE2" is a
-    # provisional placeholder distinct from the other four, pending
-    # researcher confirmation (see TODO.md open question).
+    # Same ACMG class colors as the waffle plot and distribution histogram
+    # (epipred_class_colors_ in R/7-landingPlot.R), plus one for simulation
     reported_sources <- append_na(c("VUS", "BLB", "PLP", "conflict", "simulation"), color_group_has_na)
     marginal_class_colormap <- c(
       epipred_class_colors_,
@@ -47,18 +40,23 @@ marginal_plot <- function(
     
   } else if (color_group == "gnomAD_ancestry_group") {
     
-    # create color mapping for report source
-    genetic_ancestry <- append_na(c("afr", "ami", "amr", "asj", "eas", "fin", "mid", "nfe", "sas"), color_group_has_na)
-    ancestry_colormap <- pals::glasbey(length(genetic_ancestry))
-    names(ancestry_colormap) <- genetic_ancestry
-    colormap <- ancestry_colormap
+    # create color mapping for genetic ancestry ("Missing" is grey, as for
+    # Variant Class)
+    ancestry_groups <- c("afr", "ami", "amr", "asj", "eas", "fin", "mid", "nfe", "sas")
+    ancestry_colormap <- c(
+      setNames(pals::glasbey(length(ancestry_groups)), ancestry_groups),
+      "Missing" = "grey70"
+    )
+    colormap <- ancestry_colormap[append_na(ancestry_groups, color_group_has_na)]
     
   } else {
     stop("Error in marginal_plot: invalid color_group")
   }
   
+  # as.factor(): a column that's entirely NA (e.g. gnomAD_ancestry_group for
+  # the hg19 genes) is read in as logical, which fct_na_value_to_level() rejects
   mutations <- mutations %>%
-    mutate(color_group = fct_na_value_to_level(.data[[color_group]], "Missing"))
+    mutate(color_group = fct_na_value_to_level(as.factor(.data[[color_group]]), "Missing"))
   
   # create main scatter plot
   g <- ggplot(mutations) +
@@ -102,7 +100,3 @@ marginal_plot <- function(
   
   return(gmarg)
 }
-
-# c("density", "histogram", "boxplot", "violin", "densigram")
-
-

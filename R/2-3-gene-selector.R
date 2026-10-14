@@ -1,35 +1,18 @@
 # ==========================================================================
 # 2-3-gene-selector.R
 #
-# Shared gene-selector UI component (TODO.md Phase 1). Renders the purple
-# pill-button row shown in the V2 landing page / Check_my_variant /
-# for_researchers mockups, in place of the old per-tab gene selectInput
-# dropdowns.
+# Shared gene-selector UI component: the row of gene buttons used on every
+# tab.
 #
 # Usage (inside another module's UI/server functions -- see SingleVarUI /
-# SingleVarServer in R/2-2-modules.R for a worked example):
+# SingleVarServer in R/2-2-modules.R for an example):
 #
 #   UI:      GeneSelectorUI(NS(id, "gene_selector"))
-#   Server:  GeneSelectorServer("gene_selector", gene)   # call from inside
-#                                                         # the parent's
-#                                                         # moduleServer()
+#   Server:  GeneSelectorServer("gene_selector", gene)
 #
-# `gene` must be the same top-level reactiveVal("STXBP1") app.R creates and
-# passes into every tab's *Server() function. This component reads and
-# writes it directly, so every tab using it stays in sync automatically --
-# the same guarantee the old selectInput + observeEvent/updateSelectInput
-# pairing provided, just without needing that boilerplate repeated in each
-# tab (compare to the code this replaces in SingleVarServer/AllVarServer).
-#
-# Note: genes_avail_ (R/1-setup.R) currently has only one entry (STXBP1).
-# This component already loops over however many genes are in `genes`, so
-# it doesn't need any changes when genes_avail_ is expanded later --
-# expanding that list is a separate Phase 0 task (see TODO.md).
-#
-# Tested in isolation with shiny::testServer() before being wired into the
-# app: button clicks correctly update the shared reactiveVal, and the
-# "active" highlight correctly follows whichever gene is current, including
-# when it was changed via a different instance of this same component.
+# `gene` must be the top-level reactiveVal app.R creates and passes into
+# every tab's *Server() function. This component reads and writes it
+# directly, so every tab using it stays in sync.
 # ==========================================================================
 
 # UI: a placeholder the server side fills in reactively (so the "active"
@@ -69,10 +52,8 @@ GeneSelectorUI <- function(id) {
 }
 
 # Server: wires each button's click to the shared `gene` reactiveVal, and
-# re-renders the row so the button matching the current gene() is visually
-# marked active -- regardless of whether gene() changed because THIS
-# button row was clicked, or because a different tab's copy of this
-# component (or, during the Phase 1-4 transition, an old selectInput) was.
+# re-renders the row so the button matching the current gene() is marked
+# active, whichever tab's copy of this component changed it.
 GeneSelectorServer <- function(id, gene, genes = genes_avail_) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns

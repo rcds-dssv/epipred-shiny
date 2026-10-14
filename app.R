@@ -19,15 +19,12 @@ app_theme <- bs_theme(
   preset = "yeti"
 )
 
-debugging <- FALSE
-
 # ui 
 ui <- page_fluid(
   theme = app_theme,
   page_navbar(
     id = "tabs",
     title = "EpiPred",
-    # card(actionButton("test", "test", icon = icon("redo"))), # for debugging
     nav_panel("About", HomeUI("home"), value = "welcome_page"),
     nav_panel("Check My Variant", SingleVarUI("single_var"), value = "for_patients"),
     nav_panel("For Researchers",
@@ -41,37 +38,21 @@ ui <- page_fluid(
 
 # server
 server <- function(input, output) {
-  
-  # for debugging
-  observeEvent(input$test, {
-    req(debugging)
-    print("Selecting gene index...")
-    print(paste(dt_selected_index()))
-  })
-
   gene <- reactiveVal("STXBP1")
   mutations <- reactive({
-    if (debugging) {
-      # for debugging
-      print(paste("Current gene:", gene())) 
-    }
     mutations_ <- read.csv(genes_file_map_[[gene()]])
     
     # clean up mutations data
-    clean_mutations(mutations_, warn_duplicates = FALSE)
+    clean_mutations(mutations_, gene(), warn_duplicates = FALSE)
   })
   
   # reactive variable for selecting row entry
   dt_selected_index <- reactiveVal(NULL)
   
-  singlevarserver_selected <- reactive(input$tabs == "for_patients")
-  tabledisplay_selected <- reactive(input$tabs == "for_researchers")
-  allvarserver_selected <- reactive(input$tabs == "for_researchers")
-  
   HomeServer("home", mutations, gene)
-  SingleVarServer("single_var", mutations, gene, singlevarserver_selected)
-  TableDisplayServer("table_display", mutations, tabledisplay_selected, dt_selected_index)
-  AllVarServer("all_var", mutations, gene, allvarserver_selected, dt_selected_index)
+  SingleVarServer("single_var", mutations, gene)
+  TableDisplayServer("table_display", mutations, dt_selected_index)
+  AllVarServer("all_var", mutations, gene, dt_selected_index)
 }
 
 shinyApp(ui,server)

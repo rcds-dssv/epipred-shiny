@@ -40,21 +40,13 @@ epi_class_background_panel <- function(n, seq_from = -0.05, seq_to = 1.05, stack
   return(background_geom)
 }
 
-# We created simpler visualizations to show the distribution of the scores
-
-# Pure helper (no ggplot dependency, so it's directly unit-testable) that
-# figures out where the per-variant arrow annotation below should point:
-# the horizontal midpoint of the histogram bin containing `score`, and the
-# (stacked) bar height in that bin, so the arrow always lands just above
-# the bar regardless of how many variants land in that bin.
+# Where the per-variant arrow in the histogram below should point: the
+# midpoint of the bin containing `score`, and that bin's stacked bar height.
 compute_score_bin_height <- function(all_scores, score, n_bins = 30, range_min = 0, range_max = 1) {
   breaks <- seq(range_min, range_max, length.out = n_bins + 1)
 
-  # Use cut() for BOTH the score's own bin and every other score's bin, so
-  # they use the exact same (right-closed, i.e. (a,b]) interval convention
-  # as each other -- mixing this with findInterval()'s left-closed
-  # convention would occasionally look up the wrong bin's count whenever a
-  # score lands exactly on a bin edge (e.g. Prob_PLP == 0.5 with 10 bins).
+  # cut() for both the score's bin and all other bins, so a score exactly
+  # on a bin edge is counted in the same bin either way
   all_bins <- cut(c(all_scores, score), breaks = breaks, include.lowest = TRUE)
   score_bin <- utils::tail(all_bins, 1)
   bin_idx <- as.integer(score_bin)
@@ -73,23 +65,15 @@ compute_score_bin_height <- function(all_scores, score, n_bins = 30, range_min =
   )
 }
 
-# Distribution of Prob_PLP stacked by ACMG class (TODO.md Phase 3),
-# replacing the old class-proportion barplot above. Ported from
-# Researcher_asks/code_for_plots/website_EpiPred_distribution_by_class.R,
-# using `mutations` (the harmonized per-gene data already loaded for this
-# tab) directly rather than a separate per-gene file, so the distribution
-# shown here always matches the variant classification used elsewhere on
-# this tab (colorbar, gnomAD lookup) for all 5 genes.
-#
-# `predicted_score`, if supplied, adds a downward-pointing arrow above the
-# bin containing the current variant's own score -- new relative to the
-# provided script, which only draws the two fixed threshold lines.
+# Distribution of Prob_PLP stacked by ACMG class, with dashed lines at the
+# gene's ambiguous cutoffs. `predicted_score`, if supplied, adds a
+# downward-pointing arrow above the bin containing the current variant's
+# score.
 plot_epi_distr_class_histogram <- function(
     mutations, predicted_score = NULL,
     ambiguous_range = c(0.1, 0.9), n_bins = 30
 ) {
-  # exclude simulated variants and any missing/blank class value, same as
-  # the researcher's own script does (there, via Primary_class != "sim")
+  # exclude simulated variants and any missing class value
   mutations_filtered <- mutations %>%
     filter(primary_class %in% c("VUS", "BLB", "PLP", "conflict")) %>%
     mutate(primary_class = droplevels(primary_class))
